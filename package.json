@@ -1,0 +1,17 @@
+{
+  "name": "lvupbot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./index.js",
+    "test": "test"
+  },
+  "author": "Quanghuy/JustASweetPotato",
+  "license": "UNLICENSED",
+  "description": "",
+  "dependencies": {
+    "discord.js": "^14.23.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  }
+}
