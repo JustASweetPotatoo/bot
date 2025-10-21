@@ -41,7 +41,7 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const { TOKEN } = process.env();
+const { TOKEN } = process.env;
 
 client.on(Events.MessageCreate, async (message) => {
   if (message.content.startsWith("c>")) {
