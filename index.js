@@ -37,7 +37,39 @@ function calcLevel(xp) {
   return level;
 }
 
+import * as dotenv from "dotenv";
+
+dotenv.config();
+
+const { TOKEN } = process.env();
+
 client.on(Events.MessageCreate, async (message) => {
+  if (message.content.startsWith("c>")) {
+    const args = message.content.split(" ");
+
+    if (args[0].endsWith("get-xp")) {
+      const re = await db.get("SELECT * FROM users WHERE id = ?", [args[1]], (err, row) => {
+        if (err) {
+          console.log(err);
+        }
+      });
+
+      if (re.id) {
+        const user = await message.guild.members.fetch(re.id);
+
+        if (!user) {
+          await message.reply(`User not found with id ${re.id}`);
+          return;
+        }
+
+        await message.reply({ content: `Current exp of ${user.id}: ${re.xp}` });
+      } else {
+        await message.reply(`No data with id: ${args[1]}`);
+      }
+    }
+    return;
+  }
+
   if (!message.inGuild()) return;
 
   if (!message.guild.id === "811939594882777128") return;
@@ -63,7 +95,7 @@ client.on(Events.MessageCreate, async (message) => {
 
   if (!currentLevel == 0 && currentLevel < res.level) {
     const channel = await message.guild.channels.fetch("938734812494176266");
-    console.log(`Level up detected: ${message.author.id}, level: ${res.level}`)
+    console.log(`Level up detected: ${message.author.id}, level: ${res.level}`);
 
     if (channel && channel instanceof TextChannel) {
       channel.send(`<@${message.author.id}> reached level: ${res.level}`);
@@ -73,4 +105,4 @@ client.on(Events.MessageCreate, async (message) => {
   await db.run("UPDATE users SET xp = ?, level = ? WHERE id = ?", [res.xp, res.level, res.id]);
 });
 
-client.login("");
+client.login(TOKEN);
