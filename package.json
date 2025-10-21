@@ -6,6 +6,7 @@
     "start": "node ./index.js",
     "test": "test"
   },
+  "type": "module",
   "author": "Quanghuy/JustASweetPotato",
   "license": "UNLICENSED",
   "description": "",
