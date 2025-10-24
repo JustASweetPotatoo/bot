@@ -9,6 +9,7 @@ const client = new Client({
 const db = await open({
   filename: "./datab.db",
   driver: sqlite3.Database,
+  mode: sqlite3.OPEN_READWRITE,
 });
 
 // await db.exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)");
