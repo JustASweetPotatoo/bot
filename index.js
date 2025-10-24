@@ -39,35 +39,39 @@ function calcLevel(xp) {
 
 import * as dotenv from "dotenv";
 
-dotenv.config();
+dotenv.config("/");
 
 const { TOKEN } = process.env;
 
 client.on(Events.MessageCreate, async (message) => {
   if (message.content.startsWith("c>")) {
-    const args = message.content.split(" ");
+    try {
+      const args = message.content.split(" ");
 
-    if (args[0].endsWith("get-xp")) {
-      const re = await db.get("SELECT * FROM users WHERE id = ?", [args[1]], (err, row) => {
-        if (err) {
-          console.log(err);
+      if (args[0].endsWith("get-xp")) {
+        const re = await db.get("SELECT * FROM users WHERE id = ?", [args[1]], (err, row) => {
+          if (err) {
+            console.log(err);
+          }
+        });
+
+        if (re && re.id) {
+          const user = await message.guild.members.fetch(re.id);
+
+          if (!user) {
+            await message.reply(`User not found with id ${re.id}`);
+            return;
+          }
+
+          await message.reply({ content: `Current exp of ${user.id}: ${re.xp}` });
+        } else {
+          await message.reply(`No data with id: ${args[1]}`);
         }
-      });
-
-      if (re.id) {
-        const user = await message.guild.members.fetch(re.id);
-
-        if (!user) {
-          await message.reply(`User not found with id ${re.id}`);
-          return;
-        }
-
-        await message.reply({ content: `Current exp of ${user.id}: ${re.xp}` });
-      } else {
-        await message.reply(`No data with id: ${args[1]}`);
       }
+      return;
+    } catch (error) {
+      console.error("Error executing command:", error);
     }
-    return;
   }
 
   if (!message.inGuild()) return;
@@ -103,6 +107,10 @@ client.on(Events.MessageCreate, async (message) => {
   }
 
   await db.run("UPDATE users SET xp = ?, level = ? WHERE id = ?", [res.xp, res.level, res.id]);
+});
+
+client.on(Events.ClientReady, () => {
+  console.log(`Logged in as ${client.user.tag}`);
 });
 
 client.login(TOKEN);
