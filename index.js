@@ -49,30 +49,68 @@ client.on(Events.MessageCreate, async (message) => {
     try {
       const args = message.content.split(" ");
 
-      if (args[0].endsWith("get-xp")) {
-        const re = await db.get("SELECT * FROM users WHERE id = ?", [args[1]], (err, row) => {
-          if (err) {
-            console.log(err);
-          }
-        });
-
-        if (re && re.id) {
-          const user = await message.guild.members.fetch(re.id);
-
-          if (!user) {
-            await message.reply(`User not found with id ${re.id}`);
-            return;
-          }
-
-          await message.reply({ content: `Current exp of ${user.id}: ${re.xp}` });
-        } else {
-          await message.reply(`No data with id: ${args[1]}`);
+      const re = await db.get("SELECT * FROM users WHERE id = ?", [args[1]], (err, row) => {
+        if (err) {
+          console.log(err);
         }
+      });
+
+      switch (args[0]) {
+        case "c>ping":
+          await message.reply("Pong!");
+          break;
+        case "c>level":
+          if (re && re.id) {
+            const user = await message.guild.members.fetch(re.id);
+
+            if (!user) {
+              await message.reply(`User not found with id ${re.id}`);
+              return;
+            }
+
+            await message.reply({ content: `Current level of ${user.id}: ${re.level}` });
+          } else {
+            await message.reply(`No data with id: ${args[1]}`);
+          }
+          break;
+        case "c>messages":
+          if (re && re.id) {
+            const user = await message.guild.members.fetch(re.id);
+
+            if (!user) {
+              await message.reply(`User not found with id ${re.id}`);
+              return;
+            }
+
+            await message.reply({ content: `Current message count of ${user.id}: ${re.message_count}` });
+          } else {
+            await message.reply(`No data with id: ${args[1]}`);
+          }
+          break;
+        case "c>xp":
+          if (re && re.id) {
+            const user = await message.guild.members.fetch(re.id);
+
+            if (!user) {
+              await message.reply(`User not found with id ${re.id}`);
+              return;
+            }
+
+            await message.reply({ content: `Current exp of ${user.id}: ${re.xp}` });
+          } else {
+            await message.reply(`No data with id: ${args[1]}`);
+          }
+
+          return;
+        default:
+          await message.reply("Unknown command.");
+          break;
       }
-      return;
     } catch (error) {
       console.error("Error executing command:", error);
     }
+
+    return;
   }
 
   if (!message.inGuild()) return;
@@ -88,15 +126,16 @@ client.on(Events.MessageCreate, async (message) => {
   });
 
   if (!res) {
-    res = { id: message.author.id, xp: xpPlus, level: 0 };
+    res = { id: message.author.id, xp: xpPlus, level: 0, message_count: 0 };
 
-    await db.run("INSERT INTO users (id, xp, level) VALUES (?, ?, ?)", [res.id, res.xp, res.level]);
+    await db.run("INSERT INTO users (id, xp, level, message_count) VALUES (?, ?, ?, ?)", [res.id, res.xp, res.level, res.message_count]);
     return;
   }
 
   res.xp += xpPlus;
   const currentLevel = res.level;
   res.level = calcLevel(res.xp);
+  res.message_count += 1;
 
   if (!currentLevel == 0 && currentLevel < res.level) {
     const channel = await message.guild.channels.fetch("938734812494176266");
@@ -107,7 +146,7 @@ client.on(Events.MessageCreate, async (message) => {
     }
   }
 
-  await db.run("UPDATE users SET xp = ?, level = ? WHERE id = ?", [res.xp, res.level, res.id]);
+  await db.run("UPDATE users SET xp = ?, level = ?, message_count = ? WHERE id = ?", [res.xp, res.level, res.message_count, res.id]);
 });
 
 client.on(Events.ClientReady, () => {
