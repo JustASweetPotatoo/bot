@@ -1,6 +1,7 @@
 import { Colors, EmbedBuilder, Message, TextChannel } from "discord.js";
 import MossClient from "../Client.js";
 import Handler from "./Handler.js";
+import { calcLevel, getTotalXpForLevel } from "../utils/random.js";
 
 export default class PrefixCommandHandler extends Handler {
   commands = {
@@ -33,6 +34,11 @@ export default class PrefixCommandHandler extends Handler {
       name: "top",
       usage: "",
       function: this.getTopLevel,
+    },
+    xpUpdate: {
+      name: "xp-update",
+      usage: "<id> <type> <amount>",
+      function: this,
     },
     "db-print": {
       name: "db-print",
@@ -289,5 +295,36 @@ export default class PrefixCommandHandler extends Handler {
     }
 
     message.reply(`Updated ${lines.length} users into database.`);
+  }
+
+  /**
+   * @param {Message<true>} message
+   * @param {Array<string>} args
+   */
+  async xpUpdate(message, args) {
+    if (args[1].match("level") || args[1].match("xp")) {
+      const userData = await this.client.userService.get(args[2]);
+      if (!userData.id) {
+        await message.reply({ content: "User not found !" });
+        return;
+      }
+
+      if (args[2] === "level") {
+        userData.level = parseInt(args[3]);
+        userData.xp = getTotalXpForLevel(userData.level);
+      } else {
+        userData.xp = parseInt(args[3]);
+        userData.level = calcLevel(userData.xp);
+      }
+
+      await this.client.userService.insert(userData);
+
+      await message.reply({ content: "Updated user !" });
+    } else {
+      let replyMessage = await message.reply({ content: `Invalid operation! args[2] must be level or xp not ${args[2]}` });
+      setTimeout(async () => {
+        if (replyMessage.deletable) await replyMessage.delete();
+      }, 5000);
+    }
   }
 }

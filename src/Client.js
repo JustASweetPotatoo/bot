@@ -4,6 +4,7 @@ import PrefixCommandHandler from "./modules/PrefixCommandHandler.js";
 import DatabaseManager from "./database/DatabaseManager.js";
 import LevelHandler from "./modules/LevelHandler.js";
 import AutoReplyHandler from "./modules/AutoReplyHandler.js";
+import UserService from "./database/UserService.js";
 
 class MossClient extends Client {
   __systemPath = fileURLToPath(import.meta.url)
@@ -26,6 +27,8 @@ class MossClient extends Client {
     });
 
     this.databaseManager = new DatabaseManager(this);
+
+    this.userService = new UserService(this);
 
     this.prefixCommandHandler = new PrefixCommandHandler({ client: this });
     this.levelHandler = new LevelHandler({ client: this });
