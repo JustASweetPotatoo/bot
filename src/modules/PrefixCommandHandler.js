@@ -1,5 +1,4 @@
 import { Colors, EmbedBuilder, Message, TextChannel } from "discord.js";
-import MossClient from "../Client.js";
 import Handler from "./Handler.js";
 import { calcLevel, getTotalXpForLevel } from "../utils/random.js";
 

@@ -1,4 +1,4 @@
-import MossClient from "../Client";
+import MossClient from "../Client.js";
 
 export default class UserService {
   /**
