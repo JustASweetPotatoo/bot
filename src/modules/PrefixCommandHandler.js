@@ -210,7 +210,8 @@ export default class PrefixCommandHandler extends Handler {
         `User: ${member.user.tag}/${userData.id}, xp: ${userData.xp}, lv: ${userData.level}, msg: ${userData.message_count}`
       );
     }
-    await message.reply({ content: `${convertedUserMessages.join("\n")}` });
+
+    await message.reply({ content: `Top 10 user: \n${convertedUserMessages.join("\n")}` });
   }
 
   /**
@@ -281,12 +282,10 @@ export default class PrefixCommandHandler extends Handler {
 
     for (const line of lines) {
       const [id, xp, level, message_count] = line.split("/");
-      await this.client.databaseManager.db.run("INSERT INTO users (id, xp, level, message_count) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING", [
-        id,
-        parseInt(xp),
-        parseInt(level),
-        parseInt(message_count),
-      ]);
+      await this.client.databaseManager.db.run(
+        "INSERT INTO users (id, xp, level, message_count) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET xp = excluded.xp, level = excluded.level, message_count = excluded.message_count;",
+        [id, parseInt(xp), parseInt(level), parseInt(message_count)]
+      );
     }
 
     message.reply(`Updated ${lines.length} users into database.`);
