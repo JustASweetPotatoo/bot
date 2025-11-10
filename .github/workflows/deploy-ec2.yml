@@ -12,9 +12,9 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Build Docker image
+      - name: Build, tag, and push image to Amazon ECR
         run: |
-          docker build -t bot .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f .
 
       - name: Setup SSH key
         run: |
