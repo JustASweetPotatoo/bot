@@ -40,16 +40,14 @@ class MossClient extends Client {
   }
 
   async join() {
-    dotenv.config("../");
-
-    const { TOKEN } = process.env;
+    const { DISCORD_BOT_TOKEN } = process.env;
 
     if (await this.databaseManager.createConnection()) {
       console.warn("Force shutdown!");
       return;
     }
 
-    this.login(TOKEN);
+    this.login(DISCORD_BOT_TOKEN);
   }
 }
 
