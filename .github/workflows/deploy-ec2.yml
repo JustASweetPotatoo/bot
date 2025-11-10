@@ -4,6 +4,14 @@ on:
   push:
     branches: ["master"]
 
+env:
+  AWS_REGION: ap-southeast-2
+  ECR_REPOSITORY: bot
+  ECS_SERVICE: bot-service
+  ECS_CLUSTER: bot-cluster
+  ECS_TASK_DEFINITION: .aws/task-definition.json
+  CONTAINER_NAME: bot
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -11,10 +19,6 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-
-      - name: Build, tag, and push image to Amazon ECR
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f ./ .
 
       - name: Setup SSH key
         run: |
@@ -27,8 +31,14 @@ jobs:
             set -e
 
             # Pull latest code (if you clone from git)
-            cd ~/bot || git clone https://github.com/${{ github.repository }}.git bot && cd bot
-            git pull
+            if [ -d ~/bot ]; then
+              cd ~/bot
+              git fetch origin master
+              git reset --hard origin/master
+            else
+              git clone https://github.com/${{ github.repository }}.git ~/bot
+              cd ~/bot
+            fi
 
             # Build new image
             docker build -t bot ./

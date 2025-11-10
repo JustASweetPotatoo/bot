@@ -4,7 +4,6 @@ import PrefixCommandHandler from "./modules/PrefixCommandHandler.js";
 import DatabaseManager from "./database/DatabaseManager.js";
 import LevelHandler from "./modules/LevelHandler.js";
 import AutoReplyHandler from "./modules/AutoReplyHandler.js";
-import dotenv from "dotenv";
 
 class MossClient extends Client {
   __systemPath = fileURLToPath(import.meta.url)
@@ -42,15 +41,14 @@ class MossClient extends Client {
   }
 
   async join() {
-    dotenv.config("../");
-    const { DISCORD_BOT_TOKEN, TOKEN } = process.env;
+    const { DISCORD_BOT_TOKEN } = process.env;
 
     if (await this.databaseManager.createConnection()) {
       console.warn("Force shutdown!");
       return;
     }
 
-    this.login(DISCORD_BOT_TOKEN ?? TOKEN);
+    this.login(DISCORD_BOT_TOKEN);
   }
 }
 
