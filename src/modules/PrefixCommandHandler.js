@@ -109,7 +109,7 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async getLevel(message, args) {
-    let re = await db.get("SELECT * FROM users WHERE id = ?", [args[1]], (err, row) => {
+    let re = await this.client.databaseManager.db.get("SELECT * FROM users WHERE id = ?", [args[1]], (err, row) => {
       if (err) {
         console.log(err);
       }
