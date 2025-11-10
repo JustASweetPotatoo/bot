@@ -1,13 +1,15 @@
 import { Client, Events, GatewayIntentBits } from "discord.js";
-import * as dotenv from "dotenv";
 import { fileURLToPath } from "url";
-import PrefixCommandHandler from "./modules/prefixCommandHandler.js";
+import PrefixCommandHandler from "./modules/PrefixCommandHandler.js";
 import DatabaseManager from "./database/DatabaseManager.js";
 import LevelHandler from "./modules/LevelHandler.js";
 import AutoReplyHandler from "./modules/AutoReplyHandler.js";
+import dotenv from "dotenv";
 
 class MossClient extends Client {
-  __systemPath = fileURLToPath(import.meta.url).replace("\\Client.js", "");
+  __systemPath = fileURLToPath(import.meta.url)
+    .replace("\\Client.js", "")
+    .replace("/Client.js", "");
 
   constructor() {
     super({
@@ -40,14 +42,15 @@ class MossClient extends Client {
   }
 
   async join() {
-    const { DISCORD_BOT_TOKEN } = process.env;
+    dotenv.config("../");
+    const { DISCORD_BOT_TOKEN, TOKEN } = process.env;
 
     if (await this.databaseManager.createConnection()) {
       console.warn("Force shutdown!");
       return;
     }
 
-    this.login(DISCORD_BOT_TOKEN);
+    this.login(DISCORD_BOT_TOKEN ?? TOKEN);
   }
 }
 

@@ -15,14 +15,17 @@ export default class DatabaseManager {
   createConnection = async () => {
     let err = null;
 
-    this.db = await open({
+    await open({
       filename: path.join(this.client.__systemPath, "./database/database.db"),
       driver: sqlite3.Database,
-    }).catch((error) => {
-      err = error;
-    });
-
-    await this.createTable();
+    })
+      .then(async (db) => {
+        this.db = db;
+        await this.createTable();
+      })
+      .catch((error) => {
+        err = error;
+      });
 
     if (err) console.log(err);
 
@@ -30,6 +33,8 @@ export default class DatabaseManager {
   };
 
   createTable = async () => {
-    await this.db.run("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, xp NUMBER DEFAULT(0), level NUMBER DEFAULT(0), message_count NUMBER DEFAULT(0));");
+    await this.db.run(
+      "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, xp NUMBER DEFAULT(0), level NUMBER DEFAULT(0), message_count NUMBER DEFAULT(0));"
+    );
   };
 }
