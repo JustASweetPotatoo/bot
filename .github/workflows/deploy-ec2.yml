@@ -14,7 +14,7 @@ jobs:
 
       - name: Build, tag, and push image to Amazon ECR
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f ./ .
 
       - name: Setup SSH key
         run: |
@@ -31,7 +31,7 @@ jobs:
             git pull
 
             # Build new image
-            docker build -t bot .
+            docker build -t bot ./
 
             # Stop old container (if exists)
             docker stop bot || true
