@@ -32,4 +32,4 @@ function getTotalXpForLevel(level) {
   return (5 / 3) * level ** 3 + 25 * level ** 2 + 100 * level;
 }
 
-export { getRandomInt, getTotalXpForLevel, calcLevel, getTotalXpForLevel };
+export { getRandomInt, getTotalXpForLevel, calcLevel };
