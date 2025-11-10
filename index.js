@@ -1,4 +1,4 @@
-import MossClient from "./Client.js";
+import MossClient from "./src/Client.js";
 
 const client = new MossClient();
 
