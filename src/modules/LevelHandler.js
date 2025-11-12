@@ -1,4 +1,4 @@
-import { Message, TextChannel } from "discord.js";
+import { EmbedBuilder, Message, TextChannel } from "discord.js";
 import Handler from "./Handler.js";
 import { calcLevel, getRandomInt } from "../utils/random.js";
 
@@ -14,19 +14,13 @@ class LevelHandler extends Handler {
 
     const xpPlus = getRandomInt(25, 35);
 
-    let res = await this.client.databaseManager.db.get("SELECT * FROM users WHERE id = ?", [message.author.id], (err, row) => {
-      if (err) console.log(err);
-    });
+    let res = await this.client.userService.get(message.author.id);
 
     if (!res) {
       res = { id: message.author.id, xp: xpPlus, level: 0, message_count: 0 };
 
-      await this.client.databaseManager.db.run("INSERT INTO users (id, xp, level, message_count) VALUES (?, ?, ?, ?)", [
-        res.id,
-        res.xp,
-        res.level,
-        res.message_count,
-      ]);
+      await this.client.userService.insert(res);
+
       return;
     }
 
@@ -40,16 +34,12 @@ class LevelHandler extends Handler {
       console.log(`Level up detected: ${message.author.id}, level: ${res.level}`);
 
       if (channel && channel instanceof TextChannel) {
-        channel.send(`<@${message.author.id}> reached level: ${res.level}`);
+        const embed = new EmbedBuilder({ title: "Level up !", description: `**Bạn đã đạt level ${res.level}**` });
+        channel.send({ content: `<@${res.id}>`, embeds: [embed] });
       }
     }
 
-    await this.client.databaseManager.db.run("UPDATE users SET xp = ?, level = ?, message_count = ? WHERE id = ?", [
-      res.xp,
-      res.level,
-      res.message_count,
-      res.id,
-    ]);
+    await this.client.userService.insert(res);
   };
 }
 

@@ -37,7 +37,7 @@ export default class PrefixCommandHandler extends Handler {
     xpUpdate: {
       name: "xp-update",
       usage: "<id> <type> <amount>",
-      function: this,
+      function: this.xpUpdate,
     },
     "db-print": {
       name: "db-print",

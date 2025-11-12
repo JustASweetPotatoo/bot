@@ -1,4 +1,4 @@
-import { Client, Events, GatewayIntentBits } from "discord.js";
+import { Client, Colors, EmbedBuilder, Events, GatewayIntentBits } from "discord.js";
 import { fileURLToPath } from "url";
 import PrefixCommandHandler from "./modules/PrefixCommandHandler.js";
 import DatabaseManager from "./database/DatabaseManager.js";
@@ -34,12 +34,22 @@ class MossClient extends Client {
     this.levelHandler = new LevelHandler({ client: this });
     this.autoReplyHandler = new AutoReplyHandler({ client: this });
 
-    this.on(Events.MessageCreate, (message) => {
+    this.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
 
-      this.prefixCommandHandler.onMessage(message);
-      this.levelHandler.onMessage(message);
-      this.autoReplyHandler.onMessage(message);
+      try {
+        this.prefixCommandHandler.onMessage(message);
+        this.levelHandler.onMessage(message);
+        this.autoReplyHandler.onMessage(message);
+      } catch (error) {
+        const replyMessage = await message.reply({
+          embeds: [new EmbedBuilder({ title: "Error on executing event messageCreate !", color: Colors.Red })],
+        });
+
+        setTimeout(() => {
+          if (replyMessage.deletable) replyMessage.delete();
+        }, 5000);
+      }
     });
   }
 
