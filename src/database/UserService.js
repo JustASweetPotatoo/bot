@@ -18,7 +18,7 @@ export default class UserService {
    * @param {string} id
    * @returns {Promise<{id: string, xp: number, level: number, message_count: number} | null>}
    */
-  get = async (id) => await this.db.get("SELECT * FROM users WHERE id = ?;"[id]);
+  get = async (id) => await this.db.get("SELECT * FROM users WHERE id = ?;", [id]);
 
   /**
    *

@@ -3,3 +3,4 @@ package-lock.json
 datab.db
 database.db
 .env
+debug.js
