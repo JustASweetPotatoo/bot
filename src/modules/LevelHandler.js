@@ -1,4 +1,4 @@
-import { EmbedBuilder, Message, TextChannel } from "discord.js";
+import { Colors, EmbedBuilder, Message, TextChannel } from "discord.js";
 import Handler from "./Handler.js";
 import { calcLevel, getRandomInt } from "../utils/random.js";
 
@@ -31,11 +31,10 @@ class LevelHandler extends Handler {
 
     if (!currentLevel == 0 && currentLevel < res.level) {
       const channel = await message.guild.channels.fetch("938734812494176266");
-      console.log(`Level up detected: ${message.author.id}, level: ${res.level}`);
 
       if (channel && channel instanceof TextChannel) {
-        const embed = new EmbedBuilder({ title: "Level up !", description: `**Bạn đã đạt level ${res.level}**` });
-        channel.send({ content: `<@${res.id}>`, embeds: [embed] });
+        const embed = new EmbedBuilder({ description: `**Bạn đã đạt level ${res.level}**`, color: Colors.Blurple });
+        channel.send({ content: `<@${res.id}> Level up !`, embeds: [embed] });
       }
     }
 
