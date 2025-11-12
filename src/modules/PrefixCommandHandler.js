@@ -97,19 +97,37 @@ export default class PrefixCommandHandler extends Handler {
     messages.set(firstMessage.id, firstMessage);
 
     while (amount > 0) {
+      const bulkDeletableMessages = new Collection();
+      const oldMessages = new Collection();
+
       if (amount - 100 < 0) {
         const purgeList = await message.channel.messages.fetch({ limit: amount - 1, before: firstMessage.id });
-        purgeList.forEach((msg) => messages.set(msg.id, msg));
+        purgeList.forEach((msg) => {
+          messages.set(msg.id, msg);
+          if (msg.bulkDeletable) {
+            bulkDeletableMessages.set(msg.id, msg);
+          } else {
+            oldMessages.set(msg.id, msg);
+          }
+        });
+        await channel.bulkDelete(purgeList);
       } else {
         const purgeList = await message.channel.messages.fetch({ limit: 100, before: firstMessage.id });
-        purgeList.forEach((msg) => messages.set(msg.id, msg));
+        purgeList.forEach((msg) => {
+          messages.set(msg.id, msg);
+          if (msg.bulkDeletable) {
+            bulkDeletableMessages.set(msg.id, msg);
+          } else {
+            oldMessages.set(msg.id, msg);
+          }
+        });
+        await channel.bulkDelete(bulkDeletableMessages);
+        oldMessages.forEach((msg) => (msg.deletable ? msg.delete() : ""));
         firstMessage = messages.last();
       }
 
       amount -= 100;
     }
-
-    await channel.bulkDelete(messages);
 
     const replyMessage = await message.reply({ content: `Deleted ${messages.size} message !` });
 
