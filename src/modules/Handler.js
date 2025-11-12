@@ -9,4 +9,12 @@ export default class Handler {
     this.name = options.name;
     this.client = options.client;
   }
+
+  /**
+   *
+   * @param {Error} error
+   */
+  onError(error) {
+    this.client.logger.writeLog(error);
+  }
 }

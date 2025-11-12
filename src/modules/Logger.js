@@ -19,10 +19,10 @@ export default class Logger {
    * @param {string | Error} content
    */
   writeLog(content) {
-    if (content instanceof String) {
-      this.logChannel.send(`\`\`\`${content}\`\`\``);
-    } else {
+    if (content instanceof Error) {
       this.logChannel.send(`\`\`\`diff\n- ${content}\`\`\``);
+    } else {
+      this.logChannel.send(`\`\`\`${content}\`\`\``);
     }
   }
 }

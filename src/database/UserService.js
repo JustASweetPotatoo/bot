@@ -7,7 +7,10 @@ export default class UserService {
    */
   constructor(client) {
     this.client = client;
-    this.db = client.databaseManager.db;
+
+    client.on("clientReady", () => {
+      this.db = client.databaseManager.db;
+    });
   }
 
   /**
