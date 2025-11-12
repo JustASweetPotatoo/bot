@@ -1,4 +1,4 @@
-import { Colors, EmbedBuilder, Message, TextChannel } from "discord.js";
+import { Collection, Colors, EmbedBuilder, Message, TextChannel, VoiceChannel } from "discord.js";
 import Handler from "./Handler.js";
 import { calcLevel, getTotalXpForLevel } from "../utils/random.js";
 
@@ -49,12 +49,74 @@ export default class PrefixCommandHandler extends Handler {
       usage: "",
       function: this.insertDatabase,
     },
+    purge: {
+      name: "purge",
+      usage: "",
+      function: this.purge,
+    },
   };
 
   prefix = "c>";
 
   constructor(options) {
     super(options);
+  }
+
+  /**
+   *
+   * @param {Message<true>} message
+   * @param {Array<string>} args
+   */
+  async purge(message, args) {
+    const channel = message.channel;
+
+    if (!(channel instanceof TextChannel || channel instanceof VoiceChannel)) return;
+
+    let amount = 3;
+    if (args[1]) {
+      amount = parseInt(args[1]);
+    }
+
+    let initCollection = await channel.messages.fetch({ limit: 2, before: message.id });
+
+    if (initCollection.size < 2) {
+      await channel.bulkDelete(messages);
+
+      const replyMessage = await message.reply({ content: `Deleted ${initCollection.size} message !` });
+
+      setTimeout(() => {
+        if (replyMessage && replyMessage.deletable) replyMessage.delete();
+      }, 5000);
+
+      return;
+    }
+
+    let firstMessage = initCollection.at(0);
+
+    let messages = new Collection();
+    messages.set(firstMessage.id, firstMessage);
+
+    while (amount > 0) {
+      if (amount - 100 < 0) {
+        const purgeList = await message.channel.messages.fetch({ limit: amount - 1, before: firstMessage.id });
+        purgeList.forEach((msg) => messages.set(msg.id, msg));
+      } else {
+        const purgeList = await message.channel.messages.fetch({ limit: 100, before: firstMessage.id });
+        purgeList.forEach((msg) => messages.set(msg.id, msg));
+        firstMessage = messages.last();
+      }
+
+      amount -= 100;
+    }
+
+    await channel.bulkDelete(messages);
+
+    const replyMessage = await message.reply({ content: `Deleted ${messages.size} message !` });
+
+    setTimeout(() => {
+      if (message && message.deletable) message.delete();
+      if (replyMessage && replyMessage.deletable) replyMessage.delete();
+    }, 5000);
   }
 
   /**
