@@ -5,6 +5,7 @@ import DatabaseManager from "./database/DatabaseManager.js";
 import LevelHandler from "./modules/LevelHandler.js";
 import AutoReplyHandler from "./modules/AutoReplyHandler.js";
 import UserService from "./database/UserService.js";
+import Logger from "./modules/Logger.js";
 
 class MossClient extends Client {
   __systemPath = fileURLToPath(import.meta.url)
@@ -24,9 +25,11 @@ class MossClient extends Client {
 
     this.on(Events.ClientReady, () => {
       console.log(`Logged in as ${this.user.tag}`);
+      this.logger.writeLog(`Logged in as ${this.user.tag}`);
     });
 
     this.databaseManager = new DatabaseManager(this);
+    this.logger = new Logger(this);
 
     this.userService = new UserService(this);
 
@@ -46,6 +49,8 @@ class MossClient extends Client {
           embeds: [new EmbedBuilder({ title: "Error on executing event messageCreate !", color: Colors.Red })],
         });
 
+        this.logger.writeLog(error);
+
         setTimeout(() => {
           if (replyMessage.deletable) replyMessage.delete();
         }, 5000);
@@ -57,7 +62,9 @@ class MossClient extends Client {
     const { DISCORD_BOT_TOKEN } = process.env;
 
     if (await this.databaseManager.createConnection()) {
-      console.warn("Force shutdown!");
+      let content = "Force shutdown !";
+      this.logger.writeLog(new Error(content));
+      console.warn(content);
       return;
     }
 
