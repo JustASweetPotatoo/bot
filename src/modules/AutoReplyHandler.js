@@ -9,7 +9,7 @@ export default class AutoReplyHandler extends Handler {
       replyMention: true,
       content: [
         {
-          replyMessage: true,
+          replyMessage: false,
           content: "mẹ mày béo !",
         },
         {
