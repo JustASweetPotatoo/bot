@@ -5,7 +5,7 @@ export default class AutoReplyHandler extends Handler {
   autoReplyData = [
     {
       match: "mmb",
-      wildcard: false,
+      wildcard: true,
       replyMention: true,
       content: [
         {
