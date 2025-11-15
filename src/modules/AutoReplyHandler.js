@@ -14,7 +14,8 @@ export default class AutoReplyHandler extends Handler {
         },
         {
           replyMessage: false,
-          content: "[capoo_sleep](https://cdn.discordapp.com/emojis/1277690970531561595.webp?size=48&name=capoo_sleep)",
+          content:
+            "[capoo_sleep](https://cdn.discordapp.com/emojis/1277690970531561595.webp?size=48&name=capoo_sleep)",
         },
       ],
     },
@@ -30,7 +31,9 @@ export default class AutoReplyHandler extends Handler {
     const args = message.content.split(" ");
 
     const autoReplyItem = this.autoReplyData.find((value) =>
-      value.wildcard ? message.content.includes(value.match) : message.content.startsWith(value.match)
+      value.wildcard
+        ? message.content.includes(value.match)
+        : message.content.startsWith(value.match)
     );
 
     if (!autoReplyItem) return;
@@ -39,11 +42,17 @@ export default class AutoReplyHandler extends Handler {
       let sendText = "undefined";
       let mentionText = undefined;
       const mentionedUser = message.mentions.users.first();
-      if (!mentionedUser && autoReplyItem.mentionUser) return;
+      if (
+        (!mentionedUser && autoReplyItem.mentionUser) ||
+        mentionedUser.id === "866628870123552798"
+      )
+        return;
       else mentionText = `<@${mentionedUser.id}> `;
 
       sendText = index == 0 ? `${mentionText}${content.content}` : content.content;
-      content.replyMessage && message.reference && message.reference.messageId ? await message.reply(sendText) : await message.channel.send(sendText);
+      content.replyMessage && message.reference && message.reference.messageId
+        ? await message.reply(sendText)
+        : await message.channel.send(sendText);
     });
   };
 }

@@ -34,7 +34,7 @@ export default class PrefixCommandHandler extends Handler {
       usage: "",
       function: this.getTopLevel,
     },
-    xpUpdate: {
+    "xp-update": {
       name: "xp-update",
       usage: "<id> <type> <amount>",
       function: this.xpUpdate,
