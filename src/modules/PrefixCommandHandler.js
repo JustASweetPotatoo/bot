@@ -1,4 +1,11 @@
-import { Collection, Colors, EmbedBuilder, Message, TextChannel, VoiceChannel } from "discord.js";
+import {
+  Collection,
+  Colors,
+  EmbedBuilder,
+  Message,
+  TextChannel,
+  VoiceChannel,
+} from "discord.js";
 import Handler from "./Handler.js";
 import { calcLevel, getTotalXpForLevel } from "../utils/random.js";
 
@@ -82,7 +89,9 @@ export default class PrefixCommandHandler extends Handler {
     if (initCollection.size < 2) {
       await channel.bulkDelete(messages);
 
-      const replyMessage = await message.reply({ content: `Deleted ${initCollection.size} message !` });
+      const replyMessage = await message.reply({
+        content: `Deleted ${initCollection.size} message !`,
+      });
 
       setTimeout(() => {
         if (replyMessage && replyMessage.deletable) replyMessage.delete();
@@ -101,7 +110,10 @@ export default class PrefixCommandHandler extends Handler {
       const oldMessages = new Collection();
 
       if (amount - 100 < 0) {
-        const purgeList = await message.channel.messages.fetch({ limit: amount - 1, before: firstMessage.id });
+        const purgeList = await message.channel.messages.fetch({
+          limit: amount - 1,
+          before: firstMessage.id,
+        });
         purgeList.forEach((msg) => {
           messages.set(msg.id, msg);
           if (msg.bulkDeletable) {
@@ -112,7 +124,10 @@ export default class PrefixCommandHandler extends Handler {
         });
         await channel.bulkDelete(purgeList);
       } else {
-        const purgeList = await message.channel.messages.fetch({ limit: 100, before: firstMessage.id });
+        const purgeList = await message.channel.messages.fetch({
+          limit: 100,
+          before: firstMessage.id,
+        });
         purgeList.forEach((msg) => {
           messages.set(msg.id, msg);
           if (msg.bulkDeletable) {
@@ -129,7 +144,9 @@ export default class PrefixCommandHandler extends Handler {
       amount -= 100;
     }
 
-    const replyMessage = await message.reply({ content: `Deleted ${messages.size} message !` });
+    const replyMessage = await message.reply({
+      content: `Deleted ${messages.size} message !`,
+    });
 
     setTimeout(() => {
       if (message && message.deletable) message.delete();
@@ -152,7 +169,9 @@ export default class PrefixCommandHandler extends Handler {
         try {
           await command.function.call(this, message, args);
         } catch (error) {
-          const replyMessage = await message.reply({ embeds: [new EmbedBuilder({ title: "Bot Error !", color: Colors.Yellow })] });
+          const replyMessage = await message.reply({
+            embeds: [new EmbedBuilder({ title: "Bot Error !", color: Colors.Yellow })],
+          });
           setTimeout(() => {
             if (replyMessage.deletable) {
               replyMessage.delete;
@@ -162,7 +181,11 @@ export default class PrefixCommandHandler extends Handler {
           console.log(error);
         }
       } else {
-        const replyMessage = await message.reply({ embeds: [new EmbedBuilder({ title: "Command Not Found !", color: Colors.Yellow })] });
+        const replyMessage = await message.reply({
+          embeds: [
+            new EmbedBuilder({ title: "Command Not Found !", color: Colors.Yellow }),
+          ],
+        });
         setTimeout(() => {
           if (replyMessage.deletable) {
             replyMessage.delete;
@@ -177,7 +200,9 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Message<true>} message
    */
   async getListCommands(message) {
-    await message.reply({ content: "Available commands:\n- " + Object.keys(this.commands).join("\n- ") });
+    await message.reply({
+      content: "Available commands:\n- " + Object.keys(this.commands).join("\n- "),
+    });
   }
 
   /**
@@ -194,18 +219,26 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async getLevel(message, args) {
-    let re = await this.client.databaseManager.db.get("SELECT * FROM users WHERE id = ?", [args[1]], (err, row) => {
-      if (err) {
-        console.log(err);
-      }
-    });
-
-    if (args[1] === "me") {
-      re = await this.client.databaseManager.db.get("SELECT * FROM users WHERE id = ?", [message.author.id], (err, row) => {
+    let re = await this.client.databaseManager.db.get(
+      "SELECT * FROM users WHERE id = ?",
+      [args[1]],
+      (err, row) => {
         if (err) {
           console.log(err);
         }
-      });
+      }
+    );
+
+    if (args[1] === "me") {
+      re = await this.client.databaseManager.db.get(
+        "SELECT * FROM users WHERE id = ?",
+        [message.author.id],
+        (err, row) => {
+          if (err) {
+            console.log(err);
+          }
+        }
+      );
     }
 
     if (re && re.id) {
@@ -228,11 +261,15 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async getNumberMessageSent(message, args) {
-    let re = await this.client.databaseManager.db.get("SELECT * FROM users WHERE id = ?", [args[1]], (err, row) => {
-      if (err) {
-        console.log(err);
+    let re = await this.client.databaseManager.db.get(
+      "SELECT * FROM users WHERE id = ?",
+      [args[1]],
+      (err, row) => {
+        if (err) {
+          console.log(err);
+        }
       }
-    });
+    );
 
     if (re && re.id) {
       const user = await message.guild.members.fetch(re.id);
@@ -242,7 +279,9 @@ export default class PrefixCommandHandler extends Handler {
         return;
       }
 
-      await message.reply({ content: `Current message count of ${user.id}: ${re.message_count}` });
+      await message.reply({
+        content: `Current message count of ${user.id}: ${re.message_count}`,
+      });
     } else {
       await message.reply(`No data with id: ${args[1]}`);
     }
@@ -254,11 +293,15 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async getXpOfUser(message, args) {
-    let re = await this.client.databaseManager.db.get("SELECT * FROM users WHERE id = ?", [args[1]], (err, row) => {
-      if (err) {
-        console.log(err);
+    let re = await this.client.databaseManager.db.get(
+      "SELECT * FROM users WHERE id = ?",
+      [args[1]],
+      (err, row) => {
+        if (err) {
+          console.log(err);
+        }
       }
-    });
+    );
 
     if (re && re.id) {
       const user = await message.guild.members.fetch(re.id);
@@ -280,11 +323,15 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async getTopLevel(message, args) {
-    const allUsers = await this.client.databaseManager.db.all("SELECT * FROM users ORDER BY xp DESC LIMIT 10", [], (err, rows) => {
-      if (err) {
-        console.log(err);
+    const allUsers = await this.client.databaseManager.db.all(
+      "SELECT * FROM users ORDER BY xp DESC LIMIT 10",
+      [],
+      (err, rows) => {
+        if (err) {
+          console.log(err);
+        }
       }
-    });
+    );
 
     const convertedUserMessages = [];
 
@@ -296,7 +343,9 @@ export default class PrefixCommandHandler extends Handler {
       );
     }
 
-    await message.reply({ content: `Top 10 user: \n${convertedUserMessages.join("\n")}` });
+    await message.reply({
+      content: `Top 10 user: \n${convertedUserMessages.join("\n")}`,
+    });
   }
 
   /**
@@ -304,11 +353,15 @@ export default class PrefixCommandHandler extends Handler {
    */
   async printDatabase(message) {
     try {
-      const allUsers = await this.client.databaseManager.db.all("SELECT * FROM users", [], (err, rows) => {
-        if (err) {
-          console.log(err);
+      const allUsers = await this.client.databaseManager.db.all(
+        "SELECT * FROM users",
+        [],
+        (err, rows) => {
+          if (err) {
+            console.log(err);
+          }
         }
-      });
+      );
 
       const guild = await this.client.guilds.fetch("811939594882777128");
       const channel = await guild.channels.fetch("938734812494176266");
@@ -316,10 +369,14 @@ export default class PrefixCommandHandler extends Handler {
       const convertedUserMessages = [];
 
       for (const userData of allUsers) {
-        convertedUserMessages.push(`${userData.id}/${userData.xp}/${userData.level}/${userData.message_count}`);
+        convertedUserMessages.push(
+          `${userData.id}/${userData.xp}/${userData.level}/${userData.message_count}`
+        );
       }
 
-      const plainText = `databaseTimestamp:${Date.now()}\n${convertedUserMessages.join("\n")}`;
+      const plainText = `databaseTimestamp:${Date.now()}\n${convertedUserMessages.join(
+        "\n"
+      )}`;
 
       if (channel && channel instanceof TextChannel) {
         const buffer = Buffer.from(plainText, "utf-8");
@@ -343,7 +400,10 @@ export default class PrefixCommandHandler extends Handler {
       return;
     }
 
-    if (targetMessage.attachments.size == 0 && targetMessage.attachments.first().contentType !== "text/plain") {
+    if (
+      targetMessage.attachments.size == 0 &&
+      targetMessage.attachments.first().contentType !== "text/plain"
+    ) {
       await message.reply("No attachment found or invalid attachment type.");
       return;
     }
@@ -381,9 +441,9 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async xpUpdate(message, args) {
-    if (args[1].match("level") || args[1].match("xp")) {
-      const userData = await this.client.userService.get(args[2]);
-      if (!userData.id) {
+    if (args[2].match("level") || args[2].match("xp")) {
+      const userData = await this.client.userService.get(args[1]);
+      if (!userData) {
         await message.reply({ content: "User not found !" });
         return;
       }
@@ -400,7 +460,9 @@ export default class PrefixCommandHandler extends Handler {
 
       await message.reply({ content: "Updated user !" });
     } else {
-      let replyMessage = await message.reply({ content: `Invalid operation! args[2] must be level or xp not ${args[2]}` });
+      let replyMessage = await message.reply({
+        content: `Invalid operation! args[2] must be level or xp not ${args[2]}`,
+      });
       setTimeout(async () => {
         if (replyMessage.deletable) await replyMessage.delete();
       }, 5000);
