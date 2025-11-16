@@ -1,4 +1,4 @@
-import { Colors, EmbedBuilder, Message, Role, TextChannel } from "discord.js";
+import { Colors, EmbedBuilder, Message, TextChannel } from "discord.js";
 import Handler from "./Handler.js";
 import { calcLevel, getRandomInt } from "../utils/random.js";
 
@@ -18,9 +18,7 @@ class LevelHandler extends Handler {
 
     if (!res) {
       res = { id: message.author.id, xp: xpPlus, level: 0, message_count: 0 };
-
       await this.client.userService.insert(res);
-
       return;
     }
 
@@ -29,39 +27,52 @@ class LevelHandler extends Handler {
     res.level = calcLevel(res.xp);
     res.message_count += 1;
 
-    if (!currentLevel == 0 && currentLevel < res.level) {
+    // Kiểm tra lên level mới
+    if (currentLevel !== 0 && currentLevel < res.level) {
       const channel = await message.guild.channels.fetch("938734812494176266");
 
       if (!(channel && channel instanceof TextChannel)) return;
 
       const checkpointList = [
-        { roleId: "1178724878615056474", level: 80 },
-        { roleId: "1178699000795373690", level: 50 },
-        { roleId: "1178698944117747864", level: 30 },
-        { roleId: "1178698847766204528", level: 10 },
+        { roleId: "1178724878615056474", level: 80, from: 51 },
+        { roleId: "1178699000795373690", level: 50, from: 31 },
+        { roleId: "1178698944117747864", level: 30, from: 11 },
+        { roleId: "1178698847766204528", level: 10, from: 0 },
       ];
 
-      const guildRoles = message.guild.roles;
-      let isHaveAchieved = false;
-      let achievedRole = undefined;
+      const achievedcheckpoint = checkpointList.find(
+        (checkpoint) => res.level >= checkpoint.level && currentLevel >= checkpoint.from
+      );
 
-      checkpointList.forEach((checkpoint) => {
-        if (res.level >= checkpoint.level) {
-          const role = guildRoles.cache.get(checkpoint.roleId);
-          if (!role) return;
-          isHaveAchieved = true;
-          achievedRole = role;
+      let newRoleToAdd;
+
+      if (achievedcheckpoint) {
+        const guildRoles = message.guild.roles;
+
+        const oldRole = message.member.roles.cache.find((role) =>
+          checkpointList.find((checkpoint) => checkpoint.roleId === role.id)
+            ? role
+            : undefined
+        );
+
+        if (oldRole) {
+          await message.member.roles.remove(oldRole);
         }
-      });
 
-      if (achievedRole) {
-        await message.member.roles.add(achievedRole);
+        const newRole = guildRoles.cache.find(
+          (role) => role.id === achievedcheckpoint.roleId
+        );
+
+        if (newRole) {
+          await message.member.roles.add(newRole);
+          newRoleToAdd = newRole;
+        }
       }
 
       const embed = new EmbedBuilder({
         title: `Bạn đã đạt level ${res.level}`,
         description: `${
-          achievedRole ? `\n*Bạn đã đạt được thành tựu:**${achievedRole.name}***` : ""
+          newRoleToAdd ? `\n*Bạn đã đạt được thành tựu:**${newRoleToAdd.name}***` : ""
         }`,
         color: Colors.Blurple,
       });
