@@ -1,4 +1,4 @@
-import { Colors, EmbedBuilder, Message, TextChannel } from "discord.js";
+import { Colors, EmbedBuilder, Message, Role, TextChannel } from "discord.js";
 import Handler from "./Handler.js";
 import { calcLevel, getRandomInt } from "../utils/random.js";
 
@@ -32,10 +32,40 @@ class LevelHandler extends Handler {
     if (!currentLevel == 0 && currentLevel < res.level) {
       const channel = await message.guild.channels.fetch("938734812494176266");
 
-      if (channel && channel instanceof TextChannel) {
-        const embed = new EmbedBuilder({ description: `**Bạn đã đạt level ${res.level}**`, color: Colors.Blurple });
-        channel.send({ content: `<@${res.id}> Level up !`, embeds: [embed] });
+      if (!(channel && channel instanceof TextChannel)) return;
+
+      const checkpointList = [
+        { roleId: "1178724878615056474", level: 80 },
+        { roleId: "1178699000795373690", level: 50 },
+        { roleId: "1178698944117747864", level: 30 },
+        { roleId: "1178698847766204528", level: 10 },
+      ];
+
+      const guildRoles = message.guild.roles;
+      let isHaveAchieved = false;
+      let achievedRole = undefined;
+
+      checkpointList.forEach((checkpoint) => {
+        if (res.level >= checkpoint.level) {
+          const role = guildRoles.cache.get(checkpoint.roleId);
+          if (!role) return;
+          isHaveAchieved = true;
+          achievedRole = role;
+        }
+      });
+
+      if (achievedRole) {
+        await message.member.roles.add(achievedRole);
       }
+
+      const embed = new EmbedBuilder({
+        title: `Bạn đã đạt level ${res.level}`,
+        description: `${
+          achievedRole ? `\n*Bạn đã đạt được thành tựu:**${achievedRole.name}***` : ""
+        }`,
+        color: Colors.Blurple,
+      });
+      await channel.send({ content: `<@${res.id}> Level up !`, embeds: [embed] });
     }
 
     await this.client.userService.insert(res);

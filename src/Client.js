@@ -46,7 +46,12 @@ class MossClient extends Client {
         this.autoReplyHandler.onMessage(message);
       } catch (error) {
         const replyMessage = await message.reply({
-          embeds: [new EmbedBuilder({ title: "Error on executing event messageCreate !", color: Colors.Red })],
+          embeds: [
+            new EmbedBuilder({
+              title: "Error on executing event messageCreate !",
+              color: Colors.Red,
+            }),
+          ],
         });
 
         this.logger.writeLog(error);

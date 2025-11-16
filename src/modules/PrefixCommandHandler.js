@@ -428,7 +428,12 @@ export default class PrefixCommandHandler extends Handler {
     for (const line of lines) {
       const [id, xp, level, message_count] = line.split("/");
       await this.client.databaseManager.db.run(
-        "INSERT INTO users (id, xp, level, message_count) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET xp = excluded.xp, level = excluded.level, message_count = excluded.message_count;",
+        `INSERT INTO users (id, xp, level, message_count) 
+          VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE 
+            SET xp = excluded.xp, 
+                level = excluded.level, 
+                message_count = excluded.message_count
+        ;`,
         [id, parseInt(xp), parseInt(level), parseInt(message_count)]
       );
     }
