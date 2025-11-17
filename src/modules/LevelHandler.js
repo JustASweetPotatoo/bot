@@ -12,7 +12,15 @@ class LevelHandler extends Handler {
     if (message.content.startsWith("c>")) return;
     if (message.guildId != "811939594882777128") return;
 
-    const xpPlus = getRandomInt(25, 35);
+    const messageLength = message.content.length;
+    const messageSplitLength = message.content.split(" ").length;
+
+    const ratio_1 = messageLength > 100 ? 1 : messageLength / 100;
+    const ratio_2 = messageSplitLength > 20 ? 1 : messageSplitLength / 20;
+
+    const ratio = (ratio_1 + ratio_2) / 2;
+
+    const xpPlus = Math.ceil(getRandomInt(25, 35) * ratio);
 
     let res = await this.client.userService.get(message.author.id);
 
