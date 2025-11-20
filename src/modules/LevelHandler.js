@@ -15,12 +15,12 @@ class LevelHandler extends Handler {
     const messageLength = message.content.length;
     const messageSplitLength = message.content.split(" ").length;
 
-    const ratio_1 = messageLength > 100 ? 1 : messageLength / 100;
-    const ratio_2 = messageSplitLength > 20 ? 1 : messageSplitLength / 20;
+    const ratio_1 = messageLength > 100 ? 1.0 : messageLength / 100;
+    const ratio_2 = messageSplitLength > 20 ? 1.0 : messageSplitLength / 20;
 
     const ratio = (ratio_1 + ratio_2) / 2;
 
-    const xpPlus = Math.ceil(getRandomInt(25, 35) * ratio);
+    const xpPlus = Math.ceil(getRandomInt(25, 35) * (ratio < 0.5 ? 0.5 : ratio));
 
     let res = await this.client.userService.get(message.author.id);
 
@@ -48,28 +48,20 @@ class LevelHandler extends Handler {
         { roleId: "1178698847766204528", level: 10, from: 0 },
       ];
 
-      const achievedcheckpoint = checkpointList.find(
-        (checkpoint) => res.level >= checkpoint.level && currentLevel >= checkpoint.from
-      );
+      const achievedcheckpoint = checkpointList.find((checkpoint) => res.level >= checkpoint.level && currentLevel >= checkpoint.from);
 
       let newRoleToAdd;
 
       if (achievedcheckpoint) {
         const guildRoles = message.guild.roles;
 
-        const oldRole = message.member.roles.cache.find((role) =>
-          checkpointList.find((checkpoint) => checkpoint.roleId === role.id)
-            ? role
-            : undefined
-        );
+        const oldRole = message.member.roles.cache.find((role) => (checkpointList.find((checkpoint) => checkpoint.roleId === role.id) ? role : undefined));
 
         if (oldRole) {
           await message.member.roles.remove(oldRole);
         }
 
-        const newRole = guildRoles.cache.find(
-          (role) => role.id === achievedcheckpoint.roleId
-        );
+        const newRole = guildRoles.cache.find((role) => role.id === achievedcheckpoint.roleId);
 
         if (newRole) {
           await message.member.roles.add(newRole);
@@ -79,9 +71,7 @@ class LevelHandler extends Handler {
 
       const embed = new EmbedBuilder({
         title: `Bạn đã đạt level ${res.level}`,
-        description: `${
-          newRoleToAdd ? `\n*Bạn đã đạt được thành tựu:**${newRoleToAdd.name}***` : ""
-        }`,
+        description: `${newRoleToAdd ? `\n*Bạn đã đạt được thành tựu:**${newRoleToAdd.name}***` : ""}`,
         color: Colors.Blurple,
       });
       await channel.send({ content: `<@${res.id}> Level up !`, embeds: [embed] });

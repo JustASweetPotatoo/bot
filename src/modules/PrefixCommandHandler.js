@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 import Handler from "./Handler.js";
 import { calcLevel, getTotalXpForLevel } from "../utils/random.js";
+import { sendTemporatyMessage } from "../utils/autoMessage.js";
 
 export default class PrefixCommandHandler extends Handler {
   commands = {
@@ -216,43 +217,27 @@ export default class PrefixCommandHandler extends Handler {
   /**
    *
    * @param {Message<true>} message
-   * @param {Array<string>} args
    */
-  async getLevel(message, args) {
-    let re = await this.client.databaseManager.db.get(
-      "SELECT * FROM users WHERE id = ?",
-      [args[1]],
-      (err, row) => {
-        if (err) {
-          console.log(err);
-        }
-      }
+  async getLevel(message) {
+    const mentionedUser = message.mentions.users.first();
+
+    if (!mentionedUser) {
+      await sendTemporatyMessage(message, { content: "No user mentioned !" }, 5000);
+      return;
+    }
+
+    let res = await this.client.userService.get(mentionedUser.id);
+
+    if (!res) {
+      await sendTemporatyMessage(message, `User not found !`, 5000);
+      return;
+    }
+
+    await sendTemporatyMessage(
+      message,
+      `Current level of ${user.id}: ${res.level}`,
+      5000
     );
-
-    if (args[1] === "me") {
-      re = await this.client.databaseManager.db.get(
-        "SELECT * FROM users WHERE id = ?",
-        [message.author.id],
-        (err, row) => {
-          if (err) {
-            console.log(err);
-          }
-        }
-      );
-    }
-
-    if (re && re.id) {
-      const user = await message.guild.members.fetch(re.id);
-
-      if (!user) {
-        await message.reply(`User not found with id ${re.id}`);
-        return;
-      }
-
-      await message.reply({ content: `Current level of ${user.id}: ${re.level}` });
-    } else {
-      await message.reply(`No data with id: ${args[1]}`);
-    }
   }
 
   /**
@@ -293,28 +278,21 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async getXpOfUser(message, args) {
-    let re = await this.client.databaseManager.db.get(
-      "SELECT * FROM users WHERE id = ?",
-      [args[1]],
-      (err, row) => {
-        if (err) {
-          console.log(err);
-        }
-      }
-    );
+    const mentionedUser = message.mentions.users.first();
 
-    if (re && re.id) {
-      const user = await message.guild.members.fetch(re.id);
-
-      if (!user) {
-        await message.reply(`User not found with id ${re.id}`);
-        return;
-      }
-
-      await message.reply({ content: `Current exp of ${user.id}: ${re.xp}` });
-    } else {
-      await message.reply(`No data with id: ${args[1]}`);
+    if (!mentionedUser) {
+      await sendTemporatyMessage(message, { content: "No user mentioned !" }, 5000);
+      return;
     }
+
+    let res = await this.client.userService.get(mentionedUser.id);
+
+    if (!res) {
+      await sendTemporatyMessage(message, `User not found !`, 5000);
+      return;
+    }
+
+    await sendTemporatyMessage(message, `Current exp of ${res.id}: ${res.level}`, 5000);
   }
 
   /**
@@ -324,7 +302,7 @@ export default class PrefixCommandHandler extends Handler {
    */
   async getTopLevel(message, args) {
     const allUsers = await this.client.databaseManager.db.all(
-      "SELECT * FROM users ORDER BY xp DESC LIMIT 10",
+      "SELECT * FROM users ORDER BY xp DESC LIMIT 10;",
       [],
       (err, rows) => {
         if (err) {
