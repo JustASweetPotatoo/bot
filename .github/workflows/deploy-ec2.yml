@@ -30,7 +30,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
 
-            # Pull latest code (if you clone from git)
+            # Pull latest code
             if [ -d ~/bot ]; then
               cd ~/bot
               git fetch origin master
@@ -40,6 +40,17 @@ jobs:
               cd ~/bot
             fi
 
+            # Create docker volume for database persistence
+            docker volume create bot_data || true
+
+            # Backup old database before removing old container
+            if docker ps -a --format '{{.Names}}' | grep -q "^bot$"; then
+              echo "Migrating old database..."
+              docker cp bot:/src/database/database.db /tmp/database.db || true
+              docker run --rm -v bot_data:/data -v /tmp:/tmp busybox \
+                sh -c "cp /tmp/database.db /data/database.db || true"
+            fi
+
             # Build new image
             docker build -t bot ./
 
@@ -47,9 +58,10 @@ jobs:
             docker stop bot || true
             docker rm bot || true
 
-            # Run new container
+            # Run new container, mounting the database file
             docker run -d --name bot \
               -e DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }} \
+              -v ~/database.db:/src/database/database.db \
               --restart always \
               bot
 
