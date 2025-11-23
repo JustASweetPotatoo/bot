@@ -263,12 +263,14 @@ export default class PrefixCommandHandler extends Handler {
     }
 
     await message.reply({
-      embeds: new EmbedBuilder({
-        author: { name: mentionedUser.username, icon_url: mentionedUser.avatarURL() },
-        description: `Level hiện tại **${res.level}**\nKinh nghiệm: **${res.xp}**\nSố tin nhắn đã chat: **${res.message_count}**`,
-        color: Colors.Blurple,
-        timestamp: new Date().getTime(),
-      }),
+      embeds: [
+        new EmbedBuilder({
+          author: { name: mentionedUser.username, icon_url: mentionedUser.avatarURL() },
+          description: `Level hiện tại **${res.level}**\nKinh nghiệm: **${res.xp}**\nSố tin nhắn đã chat: **${res.message_count}**`,
+          color: Colors.Blurple,
+          timestamp: new Date().getTime(),
+        }),
+      ],
     });
   }
 
