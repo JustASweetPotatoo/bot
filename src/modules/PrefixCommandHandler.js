@@ -2,6 +2,7 @@ import {
   Collection,
   Colors,
   EmbedBuilder,
+  GuildMessageManager,
   Message,
   TextChannel,
   VoiceChannel,
@@ -85,73 +86,76 @@ export default class PrefixCommandHandler extends Handler {
       amount = parseInt(args[1]);
     }
 
-    let initCollection = await channel.messages.fetch({ limit: 2, before: message.id });
+    let initCollection = await channel.messages.fetch({ before: message.id, limit: 100 });
+    let firstMessage = initCollection.first();
 
-    if (initCollection.size < 2) {
-      await channel.bulkDelete(messages);
-
-      const replyMessage = await message.reply({
-        content: `Deleted ${initCollection.size} message !`,
-      });
-
-      setTimeout(() => {
-        if (replyMessage && replyMessage.deletable) replyMessage.delete();
-      }, 5000);
-
+    if (!firstMessage) {
+      await sendTemporatyMessage(message, { content: "No message to delete !" }, 5000);
       return;
     }
 
-    let firstMessage = initCollection.at(0);
+    let messageChannelManager = channel.messages;
+    let messageCount = 1;
 
-    let messages = new Collection();
-    messages.set(firstMessage.id, firstMessage);
+    const bulkDeletableMessageChunks = [];
+    const oldMessageChunks = [];
 
-    while (amount > 0) {
-      const bulkDeletableMessages = new Collection();
-      const oldMessages = new Collection();
+    let oldChunk1 = new Collection();
+    let oldChunk2 = new Collection();
 
-      if (amount - 100 < 0) {
-        const purgeList = await message.channel.messages.fetch({
-          limit: amount - 1,
-          before: firstMessage.id,
-        });
-        purgeList.forEach((msg) => {
-          messages.set(msg.id, msg);
-          if (msg.bulkDeletable) {
-            bulkDeletableMessages.set(msg.id, msg);
-          } else {
-            oldMessages.set(msg.id, msg);
+    firstMessage.bulkDeletable
+      ? oldChunk1.set(firstMessage.id, firstMessage)
+      : oldChunk2.set(firstMessage.id, firstMessage);
+
+    do {
+      const fetchedMessageCollection = await messageChannelManager.fetch({
+        limit: amount >= 100 ? 100 : amount - 1,
+        before: firstMessage.id,
+      });
+
+      fetchedMessageCollection.forEach((message) => {
+        if (message.bulkDeletable) {
+          if (oldChunk1.size == 100) {
+            bulkDeletableMessageChunks.push(oldChunk1);
+            oldChunk1.clear();
           }
-        });
-        await channel.bulkDelete(purgeList);
-      } else {
-        const purgeList = await message.channel.messages.fetch({
-          limit: 100,
-          before: firstMessage.id,
-        });
-        purgeList.forEach((msg) => {
-          messages.set(msg.id, msg);
-          if (msg.bulkDeletable) {
-            bulkDeletableMessages.set(msg.id, msg);
-          } else {
-            oldMessages.set(msg.id, msg);
+
+          oldChunk1.set(message.id, message);
+        } else {
+          if (oldChunk2.size == 100) {
+            oldMessageChunks.push(oldChunk2);
+            oldChunk2.clear();
           }
-        });
-        await channel.bulkDelete(bulkDeletableMessages);
-        oldMessages.forEach((msg) => (msg.deletable ? msg.delete() : ""));
-        firstMessage = messages.last();
+
+          oldChunk2.set(message.id, message);
+        }
+      });
+
+      if (fetchedMessageCollection.size < 100) {
+        bulkDeletableMessageChunks.push(oldChunk1);
+        oldMessageChunks.push(oldChunk2);
+        messageCount += fetchedMessageCollection.size;
+        break;
       }
 
+      messageCount += fetchedMessageCollection.size;
+      firstMessage = fetchedMessageCollection.last();
+
       amount -= 100;
+    } while (amount > 0);
+
+    for (const chunk of bulkDeletableMessageChunks) {
+      await channel.bulkDelete(chunk);
     }
 
-    const replyMessage = await message.reply({
-      content: `Deleted ${messages.size} message !`,
-    });
+    for (const chunk of oldMessageChunks) {
+      chunk.forEach((mesage) => channel.delete(mesage));
+    }
+
+    sendTemporatyMessage(message, { content: `Deleted ${messageCount} message !` }, 5000);
 
     setTimeout(() => {
       if (message && message.deletable) message.delete();
-      if (replyMessage && replyMessage.deletable) replyMessage.delete();
     }, 5000);
   }
 
@@ -170,28 +174,26 @@ export default class PrefixCommandHandler extends Handler {
         try {
           await command.function.call(this, message, args);
         } catch (error) {
-          const replyMessage = await message.reply({
-            embeds: [new EmbedBuilder({ title: "Bot Error !", color: Colors.Yellow })],
-          });
-          setTimeout(() => {
-            if (replyMessage.deletable) {
-              replyMessage.delete;
-            }
-          }, 5000);
+          sendTemporatyMessage(
+            message,
+            {
+              embeds: [new EmbedBuilder({ title: "Bot Error !", color: Colors.Yellow })],
+            },
+            5000
+          );
 
-          console.log(error);
+          this.client.logger.writeLog(error);
         }
       } else {
-        const replyMessage = await message.reply({
-          embeds: [
-            new EmbedBuilder({ title: "Command Not Found !", color: Colors.Yellow }),
-          ],
-        });
-        setTimeout(() => {
-          if (replyMessage.deletable) {
-            replyMessage.delete;
-          }
-        }, 5000);
+        sendTemporatyMessage(
+          message,
+          {
+            embeds: [
+              new EmbedBuilder({ title: "Command Not Found !", color: Colors.Yellow }),
+            ],
+          },
+          5000
+        );
       }
     }
   }
@@ -211,7 +213,9 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Message<true>} message
    */
   async ping(message) {
-    await message.reply("Pong!");
+    await message.reply(
+      "Pong! Response time: " + (Date.now() - message.createdTimestamp) + "ms"
+    );
   }
 
   /**

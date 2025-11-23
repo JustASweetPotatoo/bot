@@ -37,6 +37,10 @@ class MossClient extends Client {
     this.levelHandler = new LevelHandler({ client: this });
     this.autoReplyHandler = new AutoReplyHandler({ client: this });
 
+    this.on(Events.Error, (error) => {
+      this.logger.writeLog(error);
+    });
+
     this.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
 
