@@ -23,20 +23,15 @@ export default class PrefixCommandHandler extends Handler {
       usage: "",
       function: this.ping,
     },
-    level: {
-      name: "level",
+    rank: {
+      name: "rank",
       usage: "",
-      function: this.getLevel,
+      function: this.getRank,
     },
     messages: {
       name: "messages",
       usage: "",
       function: this.getNumberMessageSent,
-    },
-    xp: {
-      name: "xp",
-      usage: "",
-      function: this.getXpOfUser,
     },
     top: {
       name: "top",
@@ -221,32 +216,6 @@ export default class PrefixCommandHandler extends Handler {
   /**
    *
    * @param {Message<true>} message
-   */
-  async getLevel(message) {
-    const mentionedUser = message.mentions.users.first();
-
-    if (!mentionedUser) {
-      await sendTemporatyMessage(message, { content: "No user mentioned !" }, 5000);
-      return;
-    }
-
-    let res = await this.client.userService.get(mentionedUser.id);
-
-    if (!res) {
-      await sendTemporatyMessage(message, `User not found !`, 5000);
-      return;
-    }
-
-    await sendTemporatyMessage(
-      message,
-      `Current level of ${mentionedUser.id}: ${res.level}`,
-      5000
-    );
-  }
-
-  /**
-   *
-   * @param {Message<true>} message
    * @param {Array<string>} args
    */
   async getNumberMessageSent(message, args) {
@@ -281,13 +250,10 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Message<true>} message
    * @param {Array<string>} args
    */
-  async getXpOfUser(message, args) {
-    const mentionedUser = message.mentions.users.first();
+  async getRank(message, args) {
+    let mentionedUser = message.mentions.users.first();
 
-    if (!mentionedUser) {
-      await sendTemporatyMessage(message, { content: "No user mentioned !" }, 5000);
-      return;
-    }
+    if (!mentionedUser) mentionedUser = message.member;
 
     let res = await this.client.userService.get(mentionedUser.id);
 
@@ -296,7 +262,14 @@ export default class PrefixCommandHandler extends Handler {
       return;
     }
 
-    await sendTemporatyMessage(message, `Current exp of ${res.id}: ${res.level}`, 5000);
+    await message.reply({
+      embeds: new EmbedBuilder({
+        author: { name: mentionedUser.username, icon_url: mentionedUser.avatarURL() },
+        description: `Level hiện tại **${res.level}**\nKinh nghiệm: **${res.xp}**\nSố tin nhắn đã chat: **${res.message_count}**`,
+        color: Colors.Blurple,
+        timestamp: new Date().getTime(),
+      }),
+    });
   }
 
   /**
