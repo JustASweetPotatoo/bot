@@ -178,6 +178,7 @@ export default class PrefixCommandHandler extends Handler {
           );
 
           this.client.logger.writeLog(error);
+          console.log(error);
         }
       } else {
         sendTemporatyMessage(
@@ -251,9 +252,7 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async getRank(message, args) {
-    let mentionedUser = message.mentions.users.first();
-
-    if (!mentionedUser) mentionedUser = message.member;
+    let mentionedUser = message.mentions.users.first() ?? message.author;
 
     let res = await this.client.userService.get(mentionedUser.id);
 
@@ -265,11 +264,10 @@ export default class PrefixCommandHandler extends Handler {
     await message.reply({
       embeds: [
         new EmbedBuilder({
-          author: { name: mentionedUser.username, icon_url: mentionedUser.avatarURL() },
+          author: { name: mentionedUser.username, iconURL: mentionedUser.avatarURL() },
           description: `Level hiện tại **${res.level}**\nKinh nghiệm: **${res.xp}**\nSố tin nhắn đã chat: **${res.message_count}**`,
           color: Colors.Blurple,
-          timestamp: new Date().getTime(),
-        }),
+        }).setTimestamp(),
       ],
     });
   }
