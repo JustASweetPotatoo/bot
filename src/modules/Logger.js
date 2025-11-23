@@ -20,7 +20,7 @@ export default class Logger {
    */
   writeLog(content) {
     if (content instanceof Error) {
-      this.logChannel.send(`\`\`\`diff\n- ${content}\`\`\``);
+      this.logChannel.send(`\`\`\`diff\n- ${content.stack}\`\`\``);
     } else {
       this.logChannel.send(`\`\`\`${content}\`\`\``);
     }

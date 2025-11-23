@@ -239,7 +239,7 @@ export default class PrefixCommandHandler extends Handler {
 
     await sendTemporatyMessage(
       message,
-      `Current level of ${user.id}: ${res.level}`,
+      `Current level of ${mentionedUser.id}: ${res.level}`,
       5000
     );
   }
