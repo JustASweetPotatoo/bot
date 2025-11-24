@@ -265,7 +265,11 @@ export default class PrefixCommandHandler extends Handler {
       embeds: [
         new EmbedBuilder({
           author: { name: mentionedUser.username, iconURL: mentionedUser.avatarURL() },
-          description: `Level hiện tại **${res.level}**\nKinh nghiệm: **${res.xp}**\nSố tin nhắn đã chat: **${res.message_count}**`,
+          description: `Level **${res.level}**\nKinh nghiệm: **${
+            res.xp
+          }** (next level in ${
+            getTotalXpForLevel(res.level + 1) - res.xp
+          } exp)\nSố tin nhắn: **${res.message_count}**`,
           color: Colors.Blurple,
         }).setTimestamp(),
       ],
