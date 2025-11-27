@@ -18,7 +18,21 @@ export default class UserService {
    * @param {string} id
    * @returns {Promise<{id: string, xp: number, level: number, message_count: number} | null>}
    */
-  get = async (id) => await this.db.get("SELECT * FROM users WHERE id = ?;", [id]);
+  get = async (id) => {
+    return await this.db.get("SELECT * FROM users WHERE id = ?;", [id]);
+  };
+
+  /**
+   *
+   * @param {string} id
+   * @returns {Promise<{id: string, xp: number, level: number, message_count: number, rank: number} | null>}
+   */
+  getRankOrderByXp = async (id) => {
+    return await this.db.get(
+      "SELECT * FROM (SELECT users.*, ROW_NUMBER() OVER (ORDER BY xp DESC) AS rank FROM users) AS ranked WHERE id = ? LIMIT 10000;",
+      [id]
+    );
+  };
 
   /**
    *

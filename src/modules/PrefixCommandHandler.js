@@ -292,19 +292,36 @@ export default class PrefixCommandHandler extends Handler {
       }
     );
 
+    const messageAuthorData = await this.client.userService.getRankOrderByXp(
+      message.author.id
+    );
+
     const convertedUserMessages = [];
+    const convertedUserMessages2 = [];
 
-    for (const userData of allUsers) {
-      const member = await message.guild.members.fetch(userData.id);
-
+    allUsers.forEach((userData, index) => {
       convertedUserMessages.push(
-        `User: ${member.user.tag}/${userData.id}, xp: ${userData.xp}, lv: ${userData.level}, msg: ${userData.message_count}`
+        `> **#${index + 1}${index < 10 ? "" : " "}** <@${userData.id}>`
       );
-    }
-
-    await message.reply({
-      content: `Top 10 user: \n${convertedUserMessages.join("\n")}`,
+      convertedUserMessages2.push(
+        `> \`xp: ${userData.xp}\` \`msg: ${userData.message_count}\``
+      );
     });
+
+    const embedBuilder = new EmbedBuilder({
+      author: { name: "Bảng Xếp Hạng (only message)", iconURL: message.guild.iconURL() },
+      title: `Top ${convertedUserMessages.length} Tin Nhắn`,
+      description: ` ***Rank của bạn: #${messageAuthorData.rank}***`,
+      timestamp: new Date(),
+      fields: [
+        { name: "User", value: convertedUserMessages.join("\n"), inline: true },
+        { name: "Xp", value: convertedUserMessages2.join("\n"), inline: true },
+      ],
+      footer: { iconURL: message.author.avatarURL(), text: message.author.username },
+      color: Colors.Blurple,
+    });
+
+    await message.reply({ embeds: [embedBuilder] });
   }
 
   /**
