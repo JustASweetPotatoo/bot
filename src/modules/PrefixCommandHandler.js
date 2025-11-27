@@ -299,11 +299,14 @@ export default class PrefixCommandHandler extends Handler {
     const convertedUserMessages = [];
     const convertedUserMessages2 = [];
 
+    const convertedUserMessages3 = [];
+
     allUsers.forEach((userData, index) => {
       convertedUserMessages.push(
         `> **#${index + 1}${index < 10 ? "" : " "}** <@${userData.id}>`
       );
-      convertedUserMessages2.push(
+      convertedUserMessages2.push(`> \`level: ${userData.level}\``);
+      convertedUserMessages3.push(
         `> \`xp: ${userData.xp}\` \`msg: ${userData.message_count}\``
       );
     });
@@ -315,7 +318,8 @@ export default class PrefixCommandHandler extends Handler {
       timestamp: new Date(),
       fields: [
         { name: "User", value: convertedUserMessages.join("\n"), inline: true },
-        { name: "Xp", value: convertedUserMessages2.join("\n"), inline: true },
+        { name: "level", value: convertedUserMessages2.join("\n"), inline: true },
+        { name: "Xp", value: convertedUserMessages3.join("\n"), inline: true },
       ],
       footer: { iconURL: message.author.avatarURL(), text: message.author.username },
       color: Colors.Blurple,
