@@ -48,20 +48,28 @@ class LevelHandler extends Handler {
         { roleId: "1178698847766204528", level: 10, from: 0 },
       ];
 
-      const achievedcheckpoint = checkpointList.find((checkpoint) => res.level >= checkpoint.level && currentLevel >= checkpoint.from);
+      const achievedcheckpoint = checkpointList.find(
+        (checkpoint) => res.level == checkpoint.level && currentLevel >= checkpoint.from
+      );
 
       let newRoleToAdd;
 
       if (achievedcheckpoint) {
         const guildRoles = message.guild.roles;
 
-        const oldRole = message.member.roles.cache.find((role) => (checkpointList.find((checkpoint) => checkpoint.roleId === role.id) ? role : undefined));
+        const oldRole = message.member.roles.cache.find((role) =>
+          checkpointList.find((checkpoint) => checkpoint.roleId === role.id)
+            ? role
+            : undefined
+        );
 
         if (oldRole) {
           await message.member.roles.remove(oldRole);
         }
 
-        const newRole = guildRoles.cache.find((role) => role.id === achievedcheckpoint.roleId);
+        const newRole = guildRoles.cache.find(
+          (role) => role.id === achievedcheckpoint.roleId
+        );
 
         if (newRole) {
           await message.member.roles.add(newRole);
@@ -71,7 +79,9 @@ class LevelHandler extends Handler {
 
       const embed = new EmbedBuilder({
         title: `Bạn đã đạt level ${res.level}`,
-        description: `${newRoleToAdd ? `\n*Bạn đã đạt được thành tựu:**${newRoleToAdd.name}***` : ""}`,
+        description: `${
+          newRoleToAdd ? `\n*Bạn đã đạt được thành tựu:**${newRoleToAdd.name}***` : ""
+        }`,
         color: Colors.Blurple,
       });
       await channel.send({ content: `<@${res.id}> Level up !`, embeds: [embed] });
