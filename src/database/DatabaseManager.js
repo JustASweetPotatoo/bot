@@ -34,7 +34,7 @@ export default class DatabaseManager {
 
   createTable = async () => {
     await this.db.run(
-      "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, xp NUMBER DEFAULT(0), level NUMBER DEFAULT(0), message_count NUMBER DEFAULT(0));"
+      "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, xp NUMBER DEFAULT(0), level NUMBER DEFAULT(0), message_count NUMBER DEFAULT(0), achivement_id TEXT);"
     );
   };
 }

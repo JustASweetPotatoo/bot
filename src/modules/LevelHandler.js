@@ -2,7 +2,37 @@ import { Colors, EmbedBuilder, Message, TextChannel } from "discord.js";
 import Handler from "./Handler.js";
 import { calcLevel, getRandomInt } from "../utils/random.js";
 
+/**
+ * @param {string} messageContent
+ */
+function calcExp(messageContent) {
+  const contentMaxLength = 100;
+  const contentSplitedMaxLenght = 20;
+
+  const contentSplitedLength = messageContent.split(" ").length; // 1
+  const contentLenght = messageContent.length; // 1
+
+  const ratio_1 =
+    contentLenght > contentMaxLength ? 1.0 : contentLenght / contentMaxLength;
+  const ratio_2 =
+    contentSplitedLength > contentSplitedMaxLenght
+      ? 1.0
+      : contentSplitedLength / contentSplitedMaxLenght;
+
+  const ratio = (ratio_1 + 2 * ratio_2) / 2;
+  const final = ratio / 2 < 0.5 ? 0.5 : ratio / 2;
+
+  return Math.ceil(getRandomInt(25, 35) * final);
+}
+
 class LevelHandler extends Handler {
+  checkpointList = [
+    { roleId: "1178724878615056474", from: 80, to: 1000 },
+    { roleId: "1178699000795373690", from: 50, to: 79 },
+    { roleId: "1178698944117747864", from: 30, to: 49 },
+    { roleId: "1178698847766204528", from: 10, to: 29 },
+  ];
+
   /**
    *
    * @param {Message<true>} message
@@ -12,82 +42,72 @@ class LevelHandler extends Handler {
     if (message.content.startsWith("c>")) return;
     if (message.guildId != "811939594882777128") return;
 
-    const messageLength = message.content.length;
-    const messageSplitLength = message.content.split(" ").length;
+    const xpPlus = calcExp(message.content);
 
-    const ratio_1 = messageLength > 100 ? 1.0 : messageLength / 100;
-    const ratio_2 = messageSplitLength > 20 ? 1.0 : messageSplitLength / 20;
+    const user = message.member;
+    const userData = await this.client.userService.get(message.author.id);
+    const oldLevel = userData.level;
+    let checkpointChanged = false;
+    let newRole = undefined;
 
-    const ratio = (ratio_1 + ratio_2) / 2;
-
-    const xpPlus = Math.ceil(getRandomInt(25, 35) * (ratio < 0.5 ? 0.5 : ratio));
-
-    let res = await this.client.userService.get(message.author.id);
-
-    if (!res) {
-      res = { id: message.author.id, xp: xpPlus, level: 0, message_count: 0 };
-      await this.client.userService.insert(res);
+    if (!userData) {
+      await this.client.userService.create(message.author.id);
       return;
     }
 
-    res.xp += xpPlus;
-    const currentLevel = res.level;
-    res.level = calcLevel(res.xp);
-    res.message_count += 1;
+    userData.xp += xpPlus;
+    userData.level = calcLevel(userData.xp);
+    userData.message_count += 1;
 
-    // Kiểm tra lên level mới
-    if (currentLevel !== 0 && currentLevel < res.level) {
-      const channel = await message.guild.channels.fetch("938734812494176266");
+    if (!this.logChannel) {
+      this.logChannel = await message.guild.channels.fetch("938734812494176266");
+    } else if (!this.logChannel || !(this.logChannel instanceof TextChannel)) {
+      return;
+    }
 
-      if (!(channel && channel instanceof TextChannel)) return;
-
-      const checkpointList = [
-        { roleId: "1178724878615056474", level: 80, from: 51 },
-        { roleId: "1178699000795373690", level: 50, from: 31 },
-        { roleId: "1178698944117747864", level: 30, from: 11 },
-        { roleId: "1178698847766204528", level: 10, from: 0 },
-      ];
-
-      const achievedcheckpoint = checkpointList.find(
-        (checkpoint) => res.level == checkpoint.level && currentLevel >= checkpoint.from
+    // Check the level of user after add xp, if user level up, continue
+    if (oldLevel < userData.level) {
+      const checkpoint = this.checkpointList.find(
+        (cp) => userData.level >= cp.from && userData.level <= cp.to
       );
 
-      let newRoleToAdd;
+      // Check if checkpoint changed
+      if (checkpoint && checkpoint.roleId != userData.achivement_id)
+        checkpointChanged = true;
 
-      if (achievedcheckpoint) {
-        const guildRoles = message.guild.roles;
+      if (checkpointChanged) {
+        user.roles.cache
+          .filter((role) => this.checkpointList.find((cp) => cp.roleId == role.id))
+          .forEach((role) => user.roles.remove(role));
 
-        const oldRole = message.member.roles.cache.find((role) =>
-          checkpointList.find((checkpoint) => checkpoint.roleId === role.id)
-            ? role
-            : undefined
-        );
+        const newCheckpointRole = message.guild.roles.cache.get(checkpoint.roleId);
 
-        if (oldRole) {
-          await message.member.roles.remove(oldRole);
+        if (!newCheckpointRole) {
+          throw new Error(
+            "Can't find the role with id " + checkpoint.roleId + " of checkpoint."
+          );
         }
 
-        const newRole = guildRoles.cache.find(
-          (role) => role.id === achievedcheckpoint.roleId
-        );
-
-        if (newRole) {
-          await message.member.roles.add(newRole);
-          newRoleToAdd = newRole;
-        }
+        userData.achivement_id = newCheckpointRole.id;
+        newRole = newCheckpointRole;
+        await user.roles.add(newCheckpointRole);
       }
 
       const embed = new EmbedBuilder({
-        title: `Bạn đã đạt level ${res.level}`,
+        title: `Bạn đã đạt level ${userData.level}`,
         description: `${
-          newRoleToAdd ? `\n*Bạn đã đạt được thành tựu:**${newRoleToAdd.name}***` : ""
+          checkpointChanged ? `\n*Bạn đã đạt được thành tựu:**${newRole.name}***` : ""
         }`,
         color: Colors.Blurple,
       });
-      await channel.send({ content: `<@${res.id}> Level up !`, embeds: [embed] });
+
+      await this.logChannel.send({
+        content: `<@${userData.id}> Level up !`,
+        embeds: [embed],
+      });
     }
 
-    await this.client.userService.insert(res);
+    this.client.userService.insert(userData);
   };
 }
 
