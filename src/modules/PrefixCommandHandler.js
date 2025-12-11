@@ -144,7 +144,7 @@ export default class PrefixCommandHandler extends Handler {
     }
 
     for (const chunk of oldMessageChunks) {
-      chunk.forEach((mesage) => channel.delete(mesage));
+      chunk.forEach((mesage) => channel.messages.delete(mesage));
     }
 
     sendTemporatyMessage(message, { content: `Deleted ${messageCount} message !` }, 5000);
