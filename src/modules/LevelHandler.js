@@ -45,7 +45,18 @@ class LevelHandler extends Handler {
     const xpPlus = calcExp(message.content);
 
     const user = message.member;
-    const userData = await this.client.userService.get(message.author.id);
+    let userData = await this.client.userService.get(message.author.id);
+
+    if (!userData) {
+      userData = {
+        id: message.id,
+        level: 0,
+        message_count: 0,
+        xp: 0,
+        achivement_id: undefined,
+      };
+    }
+
     const oldLevel = userData.level;
     let checkpointChanged = false;
     let newRole = undefined;
