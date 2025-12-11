@@ -333,15 +333,7 @@ export default class PrefixCommandHandler extends Handler {
    */
   async printDatabase(message) {
     try {
-      const allUsers = await this.client.databaseManager.db.all(
-        "SELECT * FROM users",
-        [],
-        (err, rows) => {
-          if (err) {
-            console.log(err);
-          }
-        }
-      );
+      const allUsers = await this.client.userService.getAll();
 
       const guild = await this.client.guilds.fetch("811939594882777128");
       const channel = await guild.channels.fetch("938734812494176266");
@@ -350,7 +342,7 @@ export default class PrefixCommandHandler extends Handler {
 
       for (const userData of allUsers) {
         convertedUserMessages.push(
-          `${userData.id}/${userData.xp}/${userData.level}/${userData.message_count}`
+          `${userData.id}/${userData.xp}/${userData.level}/${userData.message_count}/${userData.achivement_id}`
         );
       }
 
@@ -412,7 +404,8 @@ export default class PrefixCommandHandler extends Handler {
           VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE 
             SET xp = excluded.xp, 
                 level = excluded.level, 
-                message_count = excluded.message_count
+                message_count = excluded.message_count,
+                achivement_id = excluded.achivement_id
         ;`,
         [id, parseInt(xp), parseInt(level), parseInt(message_count)]
       );
