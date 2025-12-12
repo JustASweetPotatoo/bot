@@ -60,6 +60,40 @@ export default class PrefixCommandHandler extends Handler {
     },
   };
 
+  tutien = {
+    ngungKhi: "Ngưng Khí",
+    trucco: "Trúc Cơ",
+    ketdan: "Kết Đan",
+    nguyenanh: "Nguyên Anh",
+    thiennhan: {
+      name: "Thiên Nhân",
+      child: {
+        soky: "Sơ Kỳ",
+        trungky: "Trung Kỳ",
+        hauky: "Hậu Kỳ",
+      },
+    },
+    banthan: "Bán Thần",
+    thienton: {
+      name: "Thiên Tôn",
+      child: {
+        soky: "Sơ Kỳ",
+        trungky: "Trung Kỳ",
+        hauky: "Hậu Kỳ",
+      },
+    },
+    thienco: {
+      name: "Thiên Cổ",
+      child: {
+        soky: "Sơ Kỳ",
+        trungky: "Trung Kỳ",
+        hauky: "Hậu Kỳ",
+      },
+    },
+    chuate: "Chúa Tể",
+    vinhhangcanh: "Vĩnh Hằng Cảnh",
+  };
+
   prefix = "c>";
 
   constructor(options) {
@@ -261,15 +295,88 @@ export default class PrefixCommandHandler extends Handler {
       return;
     }
 
+    const descriptionContentCrater = () => {
+      /**
+       *
+       * @returns {{main: string, child?: string}}
+       */
+      const getTutienState = (level) => {
+        const t = this.tutien;
+
+        if (level >= 999) return { main: t.vinhhangcanh };
+        if (level >= 780) return { main: t.chuate };
+
+        if (level >= 695) return { main: t.thienco.name, child: t.thienco.child.hauky };
+        if (level >= 620) return { main: t.thienco.name, child: t.thienco.child.trungky };
+        if (level >= 545) return { main: t.thienco.name, child: t.thienco.child.soky };
+
+        if (level >= 470) return { main: t.thienton.name, child: t.thienton.child.hauky };
+        if (level >= 405)
+          return { main: t.thienton.name, child: t.thienton.child.trungky };
+        if (level >= 340) return { main: t.thienton.name, child: t.thienton.child.soky };
+
+        if (level >= 275) return { main: t.banthan };
+
+        if (level >= 220)
+          return { main: t.thiennhan.name, child: t.thiennhan.child.hauky };
+        if (level >= 175)
+          return { main: t.thiennhan.name, child: t.thiennhan.child.trungky };
+        if (level >= 130)
+          return { main: t.thiennhan.name, child: t.thiennhan.child.soky };
+
+        if (level >= 85) return { main: t.nguyenanh };
+        if (level >= 50) return { main: t.ketdan };
+        if (level >= 25) return { main: t.trucco };
+        if (level >= 10) return { main: t.ngungKhi };
+
+        return { main: "Phàm Nhân" };
+      };
+
+      let tutienState = getTutienState(res.level);
+
+      const totalExpOfCurrentLevel =
+        getTotalXpForLevel(res.level + 1) - getTotalXpForLevel(res.level);
+      const totalExpGainedOnCurrentLevel = res.xp - getTotalXpForLevel(res.level);
+      const currentLevelProcessPercentage =
+        totalExpGainedOnCurrentLevel / totalExpOfCurrentLevel;
+      const green_square = ":green_square:";
+      const white_large_square = ":white_large_square:";
+      const numberOfGreenSquare = Math.floor(currentLevelProcessPercentage * 10);
+      const progressBar = `${green_square.repeat(
+        numberOfGreenSquare
+      )}${white_large_square.repeat(10 - numberOfGreenSquare)}`;
+
+      const firstCol = [
+        ":bust_in_silhouette: **Cảnh giới:**",
+        ":chart_with_upwards_trend: **Tiến độ:**",
+        ":signal_strength: **Khí chất:**",
+        ":fast_forward: **Cảnh giới tiếp theo:**",
+      ];
+
+      const secondCol = [
+        `*${tutienState.main}${tutienState.child ? ` ${tutienState.child} ` : ` `}(lv:${
+          res.level
+        })*`,
+        `${progressBar} *(${Math.floor(currentLevelProcessPercentage * 100)}%)*`,
+        `*${res.message_count} 💬 sent*`,
+        `*${Math.floor(
+          (totalExpOfCurrentLevel - totalExpGainedOnCurrentLevel) / 30
+        )} messages*`,
+      ];
+
+      return { firstCol: firstCol, secondCol: secondCol };
+    };
+
+    const fieldData = descriptionContentCrater();
+
     await message.reply({
       embeds: [
         new EmbedBuilder({
           author: { name: mentionedUser.username, iconURL: mentionedUser.avatarURL() },
-          description: `Level **${res.level}**\nKinh nghiệm: **${
-            res.xp
-          }** (next level in ${
-            getTotalXpForLevel(res.level + 1) - res.xp
-          } exp)\nSố tin nhắn: **${res.message_count}**`,
+          fields: [
+            { name: "---", value: fieldData.firstCol.join("\n"), inline: true },
+            { name: "---", value: fieldData.secondCol.join("\n"), inline: true },
+          ],
           color: Colors.Blurple,
         }).setTimestamp(),
       ],
