@@ -83,8 +83,13 @@ class LevelHandler extends Handler {
       );
 
       // Check if checkpoint changed
-      if (checkpoint && checkpoint.roleId != userData.achivement_id)
+      if (
+        checkpoint &&
+        (!userData.achivement_id || checkpoint.roleId != userData.achivement_id)
+      ) {
         checkpointChanged = true;
+        userData.achivement_id = checkpoint.roleId;
+      }
 
       if (checkpointChanged) {
         user.roles.cache
@@ -118,7 +123,7 @@ class LevelHandler extends Handler {
       });
     }
 
-    this.client.userService.insert(userData);
+    await this.client.userService.insert(userData);
   };
 }
 

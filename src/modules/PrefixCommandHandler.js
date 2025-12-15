@@ -91,7 +91,7 @@ export default class PrefixCommandHandler extends Handler {
       },
     },
     chuate: "Chúa Tể",
-    vinhhangcanh: "Vĩnh Hằng Cảnh",
+    vinhhangcanh: "Lọ Đế Chí Tôn",
   };
 
   prefix = "c>";
@@ -342,9 +342,12 @@ export default class PrefixCommandHandler extends Handler {
       const green_square = ":green_square:";
       const white_large_square = ":white_large_square:";
       const numberOfGreenSquare = Math.floor(currentLevelProcessPercentage * 10);
-      const progressBar = `${green_square.repeat(
-        numberOfGreenSquare
-      )}${white_large_square.repeat(10 - numberOfGreenSquare)}`;
+      const progressBar =
+        res.level >= 999
+          ? ":red_square:".repeat(10)
+          : `${green_square.repeat(numberOfGreenSquare)}${white_large_square.repeat(
+              10 - numberOfGreenSquare
+            )}`;
 
       const firstCol = [
         ":bust_in_silhouette: **Cảnh giới:**",
@@ -357,11 +360,17 @@ export default class PrefixCommandHandler extends Handler {
         `*${tutienState.main}${tutienState.child ? ` ${tutienState.child} ` : ` `}(lv:${
           res.level
         })*`,
-        `${progressBar} *(${Math.floor(currentLevelProcessPercentage * 100)}%)*`,
+        `${progressBar} *(${
+          res.level >= 999 ? "MAX" : Math.floor(currentLevelProcessPercentage * 100) + "%"
+        })*`,
         `*${res.message_count} 💬 sent*`,
-        `*${Math.floor(
-          (totalExpOfCurrentLevel - totalExpGainedOnCurrentLevel) / 30
-        )} messages*`,
+        `${
+          res.level >= 999
+            ? "MAX"
+            : `*${Math.floor(
+                (totalExpOfCurrentLevel - totalExpGainedOnCurrentLevel) / 30
+              )} messages*`
+        }`,
       ];
 
       return { firstCol: firstCol, secondCol: secondCol };
