@@ -421,9 +421,9 @@ export default class PrefixCommandHandler extends Handler {
       convertedUserMessages.push(
         `> **#${index + 1}${index < 10 ? "" : " "}** <@${userData.id}>`
       );
-      convertedUserMessages2.push(`> \`level: ${userData.level}\``);
+      convertedUserMessages2.push(`> \`${userData.level}\``);
       convertedUserMessages3.push(
-        `> \`xp: ${userData.xp}\` \`msg: ${userData.message_count}\``
+        `> \`${userData.xp}\``
       );
     });
 

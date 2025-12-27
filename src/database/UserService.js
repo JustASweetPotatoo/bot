@@ -79,14 +79,13 @@ export default class UserService {
   create = async (userId) => {
     await this.db.run(
       `
-        INSERT INTO users (id, xp, level, message_count, achivement_id) 
+        INSERT INTO users (id, xp, level, message_count) 
         VALUES (?, ?, ?, ?, ?) 
         ON CONFLICT(id) DO UPDATE 
           SET 
             xp = excluded.xp, 
             level = excluded.level, 
-            message_count = excluded.message_count,
-            achivement_id = excluded.achivement_id
+            message_count = excluded.message_count
             ;`,
       [userId, 0, 0, 0]
     );
