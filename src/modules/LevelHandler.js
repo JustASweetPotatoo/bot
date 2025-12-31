@@ -49,7 +49,7 @@ class LevelHandler extends Handler {
 
     if (!userData) {
       userData = {
-        id: message.id,
+        id: message.author.id,
         level: 0,
         message_count: 0,
         xp: 0,

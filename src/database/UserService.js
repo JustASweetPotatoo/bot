@@ -30,13 +30,13 @@ export default class UserService {
   getRankOrderByXp = async (id) => {
     return await this.db.get(
       `SELECT * FROM (
-                        SELECT users.*, ROW_NUMBER() 
-                        OVER (ORDER BY xp DESC) AS rank 
-                        FROM users
-                        ) 
-          AS ranked 
-          WHERE id = ? 
-          LIMIT 10000;`,
+          SELECT users.*, ROW_NUMBER() 
+          OVER (ORDER BY xp DESC) AS rank 
+          FROM users
+          ) 
+        AS ranked 
+        WHERE id = ? 
+        LIMIT 10000;`,
       [id]
     );
   };

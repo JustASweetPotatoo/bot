@@ -422,9 +422,7 @@ export default class PrefixCommandHandler extends Handler {
         `> **#${index + 1}${index < 10 ? "" : " "}** <@${userData.id}>`
       );
       convertedUserMessages2.push(`> \`${userData.level}\``);
-      convertedUserMessages3.push(
-        `> \`${userData.xp}\``
-      );
+      convertedUserMessages3.push(`> \`${userData.xp}\``);
     });
 
     const embedBuilder = new EmbedBuilder({
@@ -513,8 +511,14 @@ export default class PrefixCommandHandler extends Handler {
     lines.shift();
     console.log(`Inserting ${lines.length} users into database.`);
 
+    const members = await message.guild.members.fetch({ limit: 2000 });
+
     for (const line of lines) {
       const [id, xp, level, message_count] = line.split("/");
+      const member = members.get(id);
+
+      if (!member) continue;
+
       await this.client.databaseManager.db.run(
         `INSERT INTO users (id, xp, level, message_count) 
           VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE 
