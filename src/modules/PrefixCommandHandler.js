@@ -520,8 +520,8 @@ export default class PrefixCommandHandler extends Handler {
       if (!member) continue;
 
       await this.client.databaseManager.db.run(
-        `INSERT INTO users (id, xp, level, message_count) 
-          VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE 
+        `INSERT INTO users (id, xp, level, message_count, achivement_id) 
+          VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE 
             SET xp = excluded.xp, 
                 level = excluded.level, 
                 message_count = excluded.message_count,
