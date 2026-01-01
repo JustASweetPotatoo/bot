@@ -514,7 +514,7 @@ export default class PrefixCommandHandler extends Handler {
     const members = await message.guild.members.fetch({ limit: 2000 });
 
     for (const line of lines) {
-      const [id, xp, level, message_count] = line.split("/");
+      const [id, xp, level, message_count, achivement_id] = line.split("/");
       const member = members.get(id);
 
       if (!member) continue;
@@ -527,7 +527,7 @@ export default class PrefixCommandHandler extends Handler {
                 message_count = excluded.message_count,
                 achivement_id = excluded.achivement_id
         ;`,
-        [id, parseInt(xp), parseInt(level), parseInt(message_count)]
+        [id, parseInt(xp), parseInt(level), parseInt(message_count), achivement_id]
       );
     }
 
