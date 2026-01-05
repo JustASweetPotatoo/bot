@@ -354,6 +354,9 @@ export default class PrefixCommandHandler extends Handler {
         ":chart_with_upwards_trend: **Tiến độ:**",
         ":signal_strength: **Khí chất:**",
         ":fast_forward: **Cảnh giới tiếp theo:**",
+        "",
+        "**Thành tựu**",
+        res.achivement_id ? `<@&${res.achivement_id}>\n` : "",
       ];
 
       const secondCol = [
@@ -371,6 +374,9 @@ export default class PrefixCommandHandler extends Handler {
                 (totalExpOfCurrentLevel - totalExpGainedOnCurrentLevel) / 30
               )} messages*`
         }`,
+        "",
+        "**Cấp độ**",
+        res.achivement_id ? "Chưa cập nhật\n" : "",
       ];
 
       return { firstCol: firstCol, secondCol: secondCol };
@@ -378,18 +384,16 @@ export default class PrefixCommandHandler extends Handler {
 
     const fieldData = descriptionContentCrater();
 
-    await message.reply({
-      embeds: [
-        new EmbedBuilder({
-          author: { name: mentionedUser.username, iconURL: mentionedUser.avatarURL() },
-          fields: [
-            { name: "---", value: fieldData.firstCol.join("\n"), inline: true },
-            { name: "---", value: fieldData.secondCol.join("\n"), inline: true },
-          ],
-          color: Colors.Blurple,
-        }).setTimestamp(),
+    const embed1 = new EmbedBuilder({
+      fields: [
+        { name: "---", value: fieldData.firstCol.join("\n"), inline: true },
+        { name: "---", value: fieldData.secondCol.join("\n"), inline: true },
       ],
-    });
+      color: Colors.Blurple,
+      author: { name: mentionedUser.username, iconURL: mentionedUser.avatarURL() },
+    }).setTimestamp();
+
+    await message.reply({ embeds: [embed1] });
   }
 
   /**
