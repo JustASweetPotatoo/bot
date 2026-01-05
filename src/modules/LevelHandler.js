@@ -60,6 +60,8 @@ class LevelHandler extends Handler {
     const oldLevel = userData.level;
     let checkpointChanged = false;
     let newRole = undefined;
+    let rauma = false;
+    let raumaRole = undefined;
 
     if (!userData) {
       await this.client.userService.create(message.author.id);
@@ -81,6 +83,15 @@ class LevelHandler extends Handler {
       const checkpoint = this.checkpointList.find(
         (cp) => userData.level >= cp.from && userData.level <= cp.to
       );
+
+      if (userData.level == 36) {
+        const role1 = message.guild.roles.cache.get("1457606878774427735");
+        if (role1) {
+          await user.roles.add(role1);
+          raumaRole = role1;
+        }
+        rauma = true;
+      }
 
       // Check if checkpoint changed
       if (
@@ -113,6 +124,12 @@ class LevelHandler extends Handler {
         title: `Bạn đã đạt level ${userData.level}`,
         description: `${
           checkpointChanged ? `\n*Bạn đã đạt được thành tựu:**${newRole.name}***` : ""
+        }${
+          rauma && raumaRole
+            ? `\n*Bạn đã đạt được thành tựu:**${raumaRole.icon ?? ""} ${
+                raumaRole.name
+              }***`
+            : ""
         }`,
         color: Colors.Blurple,
       });
