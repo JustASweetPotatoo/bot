@@ -6,6 +6,7 @@ import LevelHandler from "./modules/LevelHandler.js";
 import AutoReplyHandler from "./modules/AutoReplyHandler.js";
 import UserService from "./database/UserService.js";
 import Logger from "./modules/Logger.js";
+import NoichuHandler from "./modules/NoituHandler.js";
 
 class MossClient extends Client {
   __systemPath = fileURLToPath(import.meta.url)
@@ -36,6 +37,7 @@ class MossClient extends Client {
     this.prefixCommandHandler = new PrefixCommandHandler({ client: this });
     this.levelHandler = new LevelHandler({ client: this });
     this.autoReplyHandler = new AutoReplyHandler({ client: this });
+    this.noichuHandler = new NoichuHandler({ client: this });
 
     this.on(Events.Error, (error) => {
       this.logger.writeLog(error);
@@ -48,6 +50,7 @@ class MossClient extends Client {
         this.prefixCommandHandler.onMessage(message);
         this.levelHandler.onMessage(message);
         this.autoReplyHandler.onMessage(message);
+        this.noichuHandler.onMessage(message);
       } catch (error) {
         const replyMessage = await message.reply({
           embeds: [
