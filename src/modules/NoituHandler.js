@@ -4,6 +4,7 @@ import Handler from "./Handler.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { getRandomInt } from "../utils/random.js";
 
 // Lấy đường dẫn tuyệt đối tới dict.json
 const __filename = fileURLToPath(import.meta.url);
@@ -20,7 +21,11 @@ export default class NoichuHandler extends Handler {
   lastUserId = undefined;
   lastWord = "";
 
-  usedWordlist = "";
+  usedWordlist = {
+    _default: {
+      this_is_default: {},
+    },
+  };
 
   /**
    *
@@ -32,7 +37,7 @@ export default class NoichuHandler extends Handler {
       this.channel = await message.guild.channels.fetch(this.channelId);
     }
 
-    if (message.channelId != this.channelId) return;
+    if (message.content.startsWith(".")) return;
 
     if (message.author.id == this.lastUserId) {
       const embed = new EmbedBuilder()
@@ -55,6 +60,48 @@ export default class NoichuHandler extends Handler {
     let splitedContent = message.content.split(" ");
     let f1 = splitedContent.at(0);
     let l1 = splitedContent.at(splitedContent.length - 1);
+
+    if (message.content == "lấy gợi ý") {
+      splitedContent = this.lastWord.split(" ");
+      f1 = splitedContent.at(0);
+      l1 = splitedContent.at(splitedContent.length - 1);
+
+      const wordlist = Object.keys(dictionary[l1]).filter((word) => {
+        if (this.usedWordlist[word]) {
+          return false;
+        }
+        return true;
+      });
+
+      if (wordlist.length == 0) {
+        const embed = new EmbedBuilder()
+          .setTitle(`Đã hết gợi ý, làm mới !`)
+          .setColor(`#fff700`);
+        const replyMessage = await message.reply({ embeds: [embed] });
+
+        this.lastUserId = message.author.id;
+        this.lastWord = message.content;
+
+        if (!this.usedWordlist[l1]) {
+          this.usedWordlist[l1] = {};
+        }
+        this.usedWordlist[l1][message.content] = {};
+
+        setTimeout(() => {
+          replyMessage.deletable ? replyMessage.delete() : undefined;
+        }, 5000);
+      }
+
+      const random = wordlist.at(getRandomInt(0, wordlist.length - 1));
+
+      const embed = new EmbedBuilder()
+        .setTitle(`Gợi ý: ${random}`)
+        .setColor(Colors.Green);
+      await message.reply({ embeds: [embed] });
+      return;
+    }
+
+    if (message.channelId != this.channelId) return;
 
     if (this.lastWord && !message.content.startsWith(last)) {
       const embed = new EmbedBuilder()
@@ -91,6 +138,11 @@ export default class NoichuHandler extends Handler {
     this.lastUserId = message.author.id;
     this.lastWord = message.content;
 
+    if (!this.usedWordlist[l1]) {
+      this.usedWordlist[l1] = {};
+    }
+    this.usedWordlist[l1][message.content] = {};
+
     cacheObject = dictionary[l1];
 
     if (!cacheObject) {
@@ -102,6 +154,8 @@ export default class NoichuHandler extends Handler {
 
       this.lastUserId = undefined;
       this.lastWord = undefined;
+
+      this.usedWordlist = {};
       return;
     }
   }
