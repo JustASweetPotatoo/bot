@@ -33,6 +33,7 @@ export default class NoichuHandler extends Handler {
    * @returns
    */
   async onMessage(message) {
+    if (message.channelId != this.channelId) return;
     if (!this.channel) {
       this.channel = await message.guild.channels.fetch(this.channelId);
     }
@@ -101,7 +102,21 @@ export default class NoichuHandler extends Handler {
       return;
     }
 
-    if (message.channelId != this.channelId) return;
+    if (this.usedWordlist[f1]) {
+      if (this.usedWordlist[f1][message.content]) {
+        const embed = new EmbedBuilder()
+          .setTitle(`"${message.content}" đã được sử dụng, vui lòng chọn từ khác !`)
+          .setColor(`#fff700`);
+        await message.react("❌");
+
+        const replyMessage = await message.reply({ embeds: [embed] });
+
+        setTimeout(() => {
+          replyMessage.deletable ? replyMessage.delete() : undefined;
+        }, 5000);
+        return;
+      }
+    }
 
     if (this.lastWord && !message.content.startsWith(last)) {
       const embed = new EmbedBuilder()
