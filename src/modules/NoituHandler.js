@@ -183,7 +183,7 @@ export default class NoichuHandler extends Handler {
       await message.reply({ embeds: [embed] });
 
       this.lastUserId = undefined;
-      this.lastWord = undefined;
+      this.lastWord = "";
 
       this.usedWordlist = {};
       return;
