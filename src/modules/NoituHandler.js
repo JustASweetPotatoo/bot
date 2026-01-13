@@ -33,6 +33,18 @@ export default class NoichuHandler extends Handler {
    * @returns
    */
   async onMessage(message) {
+    try {
+      await this.processMessage(message);
+    } catch (error) {
+      this.client.logger.writeLog(error);
+    }
+  }
+
+  /**
+   *
+   * @param {Message<true>} message
+   */
+  async processMessage(message) {
     if (message.channelId != this.channelId) return;
     if (!this.channel) {
       this.channel = await message.guild.channels.fetch(this.channelId);
@@ -59,6 +71,9 @@ export default class NoichuHandler extends Handler {
     let last = splited.at(splited.length - 1);
 
     let splitedContent = message.content.split(" ");
+
+    if (splitedContent.length < 2) return;
+
     let f1 = splitedContent.at(0);
     let l1 = splitedContent.at(splitedContent.length - 1);
 
