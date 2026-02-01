@@ -29,5 +29,7 @@ export default class Logger {
     } else {
       this.logChannel.send(`\`\`\`${content}\`\`\``);
     }
+
+    console.log(content);
   }
 }

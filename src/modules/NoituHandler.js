@@ -1,4 +1,4 @@
-import { Colors, EmbedBuilder, Message } from "discord.js";
+import { Colors, EmbedBuilder, embedLength, Message } from "discord.js";
 import Handler from "./Handler.js";
 
 import fs from "fs";
@@ -18,175 +18,143 @@ export default class NoichuHandler extends Handler {
 
   channel = undefined;
 
-  lastUserId = undefined;
-  lastWord = "";
-
-  usedWordlist = {
-    _default: {
-      this_is_default: {},
-    },
+  lastPlayedTimeInfo = {
+    userId: undefined,
+    lastWord: undefined,
+    usedWordlist: [],
   };
 
   /**
    *
    * @param {Message<true>} message
-   * @returns
    */
   async onMessage(message) {
     try {
-      await this.processMessage(message);
-    } catch (error) {
-      this.client.logger.writeLog(error);
-    }
-  }
+      if (message.channelId != this.channelId || message.guildId != this.guildId) return;
 
-  /**
-   *
-   * @param {Message<true>} message
-   */
-  async processMessage(message) {
-    if (message.channelId != this.channelId) return;
-    if (!this.channel) {
-      this.channel = await message.guild.channels.fetch(this.channelId);
-    }
+      if (message.content.toLowerCase().startsWith("lấy gợi ý")) {
+        const path = this.lastPlayedTimeInfo.lastWord.split(" ");
+        const suggestWordlist = Object.keys(dictionary[path[path.length]]).filter(
+          (value) =>
+            !this.lastPlayedTimeInfo.usedWordlist.find((value1) => value == value1)
+        );
 
-    if (message.content.startsWith(".")) return;
+        if (suggestWordlist.length == 0) {
+          const embed = new EmbedBuilder()
+            .setTitle(`Đã hết gợi ý, làm mới !`)
+            .setColor(`#fff700`);
+          const replyMessage = await message.reply({ embeds: [embed] });
 
-    if (message.author.id == this.lastUserId) {
-      const embed = new EmbedBuilder()
-        .setTitle(`Bạn đã chơi trước đó, vui lòng chờ lượt !`)
-        .setColor(`#fff700`);
-      await message.react("❌");
+          setTimeout(() => {
+            replyMessage.deletable ? replyMessage.delete() : undefined;
+          }, 5000);
 
-      const replyMessage = await message.reply({ embeds: [embed] });
+          this.lastPlayedTimeInfo = {
+            ...this.lastPlayedTimeInfo,
+            lastWord: undefined,
+            userId: undefined,
+          };
 
-      setTimeout(() => {
-        replyMessage.deletable ? replyMessage.delete() : undefined;
-      }, 5000);
-      return;
-    }
-
-    let splited = this.lastWord.split(" ");
-    let first = splited.at(0);
-    let last = splited.at(splited.length - 1);
-
-    let splitedContent = message.content.split(" ");
-
-    if (splitedContent.length < 2) return;
-
-    let f1 = splitedContent.at(0);
-    let l1 = splitedContent.at(splitedContent.length - 1);
-
-    if (message.content == "lấy gợi ý") {
-      splitedContent = this.lastWord.split(" ");
-      f1 = splitedContent.at(0);
-      l1 = splitedContent.at(splitedContent.length - 1);
-
-      const wordlist = Object.keys(dictionary[l1]).filter((word) => {
-        if (this.usedWordlist[word]) {
-          return false;
+          return;
         }
-        return true;
-      });
 
-      if (wordlist.length == 0) {
-        const embed = new EmbedBuilder()
-          .setTitle(`Đã hết gợi ý, làm mới !`)
-          .setColor(`#fff700`);
-        const replyMessage = await message.reply({ embeds: [embed] });
+        await message.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(Colors.Green)
+              .setTitle(
+                `Gợi ý: ${suggestWordlist[getRandomInt(0, suggestWordlist.length - 1)]}`
+              ),
+          ],
+        });
 
-        this.lastUserId = message.author.id;
-        this.lastWord = message.content;
-
-        if (!this.usedWordlist[l1]) {
-          this.usedWordlist[l1] = {};
-        }
-        this.usedWordlist[l1][message.content] = {};
-
-        setTimeout(() => {
-          replyMessage.deletable ? replyMessage.delete() : undefined;
-        }, 5000);
-      }
-
-      const random = wordlist.at(getRandomInt(0, wordlist.length - 1));
-
-      const embed = new EmbedBuilder()
-        .setTitle(`Gợi ý: ${random}`)
-        .setColor(Colors.Green);
-      await message.reply({ embeds: [embed] });
-      return;
-    }
-
-    if (this.usedWordlist[f1]) {
-      if (this.usedWordlist[f1][message.content]) {
-        const embed = new EmbedBuilder()
-          .setTitle(`"${message.content}" đã được sử dụng, vui lòng chọn từ khác !`)
-          .setColor(`#fff700`);
-        await message.react("❌");
-
-        const replyMessage = await message.reply({ embeds: [embed] });
-
-        setTimeout(() => {
-          replyMessage.deletable ? replyMessage.delete() : undefined;
-        }, 5000);
         return;
       }
-    }
+      if (message.author.bot) return;
+      if (message.content.split(" ").length == 1) return;
+      if (message.content.startsWith(".")) return;
 
-    if (this.lastWord && !message.content.startsWith(last)) {
-      const embed = new EmbedBuilder()
-        .setTitle(`Bạn phải bắt đầu bằng từ: ${last}`)
-        .setColor(`#fff700`);
-      await message.react("❌");
+      let state = true;
+      let replyMessageContent = "";
 
-      const replyMessage = await message.reply({ embeds: [embed] });
+      if (message.author.id == this.lastPlayedTimeInfo.userId) {
+        replyMessageContent = "Bạn đã chơi trước đó, vui lòng chờ lượt !";
+        state = false;
+      }
 
-      setTimeout(() => {
-        replyMessage.deletable ? replyMessage.delete() : undefined;
-      }, 5000);
-      return;
-    }
+      const path = message.content.split(" ");
 
-    let cacheObject = dictionary[f1];
-    let trueCase = cacheObject[message.content];
+      if (state && this.lastPlayedTimeInfo.lastWord) {
+        const lastWord_lastChar =
+          this.lastPlayedTimeInfo.lastWord.split(" ")[
+            this.lastPlayedTimeInfo.lastWord.split(" ").length
+          ];
 
-    if (!cacheObject || !trueCase) {
-      const embed = new EmbedBuilder()
-        .setTitle(`Từ ${message.content} không có trong từ điển của bot`)
-        .setColor(`#fff700`);
-      await message.react("❌");
+        if (path.at(0) != lastWord_lastChar) {
+          replyMessageContent = `Bạn phải bắt đầu bằng từ: ${lastWord_lastChar}`;
+          state = false;
+        }
+      }
 
-      const replyMessage = await message.reply({ embeds: [embed] });
+      if (
+        state &&
+        this.lastPlayedTimeInfo.usedWordlist.find((value) => message.content == value)
+      ) {
+        replyMessageContent = `"${message.content}" đã được sử dụng, vui lòng chọn từ khác !`;
+        state = false;
+      }
 
-      setTimeout(() => {
-        replyMessage.deletable ? replyMessage.delete() : undefined;
-      }, 5000);
-      return;
-    }
+      try {
+        if (state && !dictionary[path[0]][message.content]) {
+          replyMessageContent = `Từ ${message.content} không có trong từ điển của bot`;
+          state = false;
+        }
+      } catch (error) {
+        replyMessageContent = `Từ **${message.content}** không có trong từ điển của bot`;
+        state = false;
 
-    await message.react("✅");
-    this.lastUserId = message.author.id;
-    this.lastWord = message.content;
+        this.client.logger.writeLog(error);
+      }
 
-    if (!this.usedWordlist[l1]) {
-      this.usedWordlist[l1] = {};
-    }
-    this.usedWordlist[l1][message.content] = {};
+      if (state) {
+        message.react("✅");
+        this.lastPlayedTimeInfo.userId = message.author.id;
+        this.lastPlayedTimeInfo.lastWord = message.content;
+        this.lastPlayedTimeInfo.usedWordlist.push(message.content);
+      } else {
+        message.react("❌");
+        message
+          .reply({
+            embeds: [
+              new EmbedBuilder().setTitle(replyMessageContent).setColor(`#fff700`),
+            ],
+          })
+          .then((replyMessage) =>
+            setTimeout(() => {
+              replyMessage.deletable ? replyMessage.delete() : undefined;
+            }, 5000)
+          );
+      }
 
-    cacheObject = dictionary[l1];
+      const remainList = Object.keys(dictionary[path[path.length - 1]]).filter(
+        (value) => !this.lastPlayedTimeInfo.usedWordlist.find((value1) => value == value1)
+      );
 
-    if (!cacheObject) {
-      const embed = new EmbedBuilder()
-        .setTitle(`Không còn từ khả dụng, làm mới !`)
-        .setColor(Colors.Blurple);
+      if (remainList.length == 0) {
+        message.channel.send({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle(`Không còn từ khả dụng, làm mới !`)
+              .setColor(Colors.Blurple),
+          ],
+        });
 
-      await message.reply({ embeds: [embed] });
-
-      this.lastUserId = undefined;
-      this.lastWord = "";
-
-      this.usedWordlist = {};
-      return;
+        this.lastPlayedTimeInfo.lastWord = undefined;
+        this.lastPlayedTimeInfo.userId == undefined;
+        this.lastPlayedTimeInfo.usedWordlist = [];
+      }
+    } catch (error) {
+      this.client.logger.writeLog(error);
     }
   }
 }
