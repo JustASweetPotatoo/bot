@@ -70,6 +70,7 @@ export default class NoichuHandler extends Handler {
 
         return;
       }
+
       if (message.author.bot) return;
       if (message.content.split(" ").length == 1) return;
       if (message.content.startsWith(".")) return;
@@ -77,7 +78,7 @@ export default class NoichuHandler extends Handler {
       let state = true;
       let replyMessageContent = "";
 
-      if (message.author.id == this.lastPlayedTimeInfo.userId) {
+      if (state && message.author.id == this.lastPlayedTimeInfo.userId) {
         replyMessageContent = "Bạn đã chơi trước đó, vui lòng chờ lượt !";
         state = false;
       }
@@ -134,6 +135,7 @@ export default class NoichuHandler extends Handler {
               replyMessage.deletable ? replyMessage.delete() : undefined;
             }, 5000)
           );
+        return;
       }
 
       const remainList = Object.keys(dictionary[path[path.length - 1]]).filter(
@@ -150,7 +152,7 @@ export default class NoichuHandler extends Handler {
         });
 
         this.lastPlayedTimeInfo.lastWord = undefined;
-        this.lastPlayedTimeInfo.userId == undefined;
+        this.lastPlayedTimeInfo.userId = undefined;
         this.lastPlayedTimeInfo.usedWordlist = [];
       }
     } catch (error) {
