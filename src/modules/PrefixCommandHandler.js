@@ -58,6 +58,11 @@ export default class PrefixCommandHandler extends Handler {
       usage: "",
       function: this.purge,
     },
+    mute: {
+      name: "mute",
+      usage: "",
+      function: this.mute,
+    },
   };
 
   tutien = {
@@ -568,6 +573,52 @@ export default class PrefixCommandHandler extends Handler {
       setTimeout(async () => {
         if (replyMessage.deletable) await replyMessage.delete();
       }, 5000);
+    }
+  }
+
+  /**
+   *
+   * @param {Message<true>} message
+   * @param {Array<string>} args
+   */
+  async mute(message, args) {
+    const userTarget = message.mentions.members.first();
+
+    const reason = args.slice(3).join(" ") || "No reason provided";
+
+    if (!userTarget) {
+      await message.reply("User not found !");
+      return;
+    }
+
+    if (args[2].endsWith("unmute")) {
+      await userTarget.timeout(null);
+      message.channel.send(`${userTarget.user.username} unmuted !`);
+      return;
+    }
+
+    if (args[2].endsWith("s")) {
+      message.channel.send(
+        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`
+      );
+      await userTarget.timeout(parseInt(args[2]) * 1000, reason);
+    } else if (args[2].endsWith("m")) {
+      message.channel.send(
+        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`
+      );
+      await userTarget.timeout(parseInt(args[2]) * 60 * 1000, reason);
+    } else if (args[2].endsWith("h")) {
+      message.channel.send(
+        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`
+      );
+      await userTarget.timeout(parseInt(args[2]) * 60 * 60 * 1000, reason);
+    } else if (args[2].endsWith("d")) {
+      message.channel.send(
+        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`
+      );
+      await userTarget.timeout(parseInt(args[2]) * 24 * 60 * 60 * 1000, reason);
+    } else {
+      await message.reply("Invalid time format !");
     }
   }
 }
