@@ -32,43 +32,51 @@ export default class NoichuHandler extends Handler {
     try {
       if (message.channelId != this.channelId || message.guildId != this.guildId) return;
 
-      if (message.content.toLowerCase().startsWith("lấy gợi ý")) {
-        const path = this.lastPlayedTimeInfo.lastWord.split(" ");
-        const suggestWordlist = Object.keys(dictionary[path[path.length]]).filter(
-          (value) =>
-            !this.lastPlayedTimeInfo.usedWordlist.find((value1) => value == value1)
-        );
+      let state = true;
+      let replyMessageContent = "";
 
-        if (suggestWordlist.length == 0) {
-          const embed = new EmbedBuilder()
-            .setTitle(`Đã hết gợi ý, làm mới !`)
-            .setColor(`#fff700`);
-          const replyMessage = await message.reply({ embeds: [embed] });
+      if (message.content.toLowerCase().startsWith("lấy mẹo")) {
+        if (!this.lastPlayedTimeInfo.lastWord || !this.lastPlayedTimeInfo.userId) {
+          state = false;
+          replyMessageContent = "Game đã reset, bạn có thể bắt đầu lại bằng một từ mới";
+        } else {
+          const path = this.lastPlayedTimeInfo.lastWord.split(" ");
+          const suggestWordlist = Object.keys(dictionary[path[path.length - 1]]).filter(
+            (value) =>
+              !this.lastPlayedTimeInfo.usedWordlist.find((value1) => value == value1)
+          );
 
-          setTimeout(() => {
-            replyMessage.deletable ? replyMessage.delete() : undefined;
-          }, 5000);
+          if (suggestWordlist.length == 0) {
+            const embed = new EmbedBuilder()
+              .setTitle(`Đã hết gợi ý, làm mới !`)
+              .setColor(`#fff700`);
+            const replyMessage = await message.reply({ embeds: [embed] });
 
-          this.lastPlayedTimeInfo = {
-            ...this.lastPlayedTimeInfo,
-            lastWord: undefined,
-            userId: undefined,
-          };
+            setTimeout(() => {
+              replyMessage.deletable ? replyMessage.delete() : undefined;
+            }, 5000);
+
+            this.lastPlayedTimeInfo = {
+              ...this.lastPlayedTimeInfo,
+              lastWord: undefined,
+              userId: undefined,
+            };
+
+            return;
+          }
+
+          await message.reply({
+            embeds: [
+              new EmbedBuilder()
+                .setColor(Colors.Green)
+                .setTitle(
+                  `Gợi ý: ${suggestWordlist[getRandomInt(0, suggestWordlist.length - 1)]}`
+                ),
+            ],
+          });
 
           return;
         }
-
-        await message.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(Colors.Green)
-              .setTitle(
-                `Gợi ý: ${suggestWordlist[getRandomInt(0, suggestWordlist.length - 1)]}`
-              ),
-          ],
-        });
-
-        return;
       }
 
       if (!this.lastPlayedTimeInfo.lastWord) {
@@ -76,11 +84,8 @@ export default class NoichuHandler extends Handler {
       }
 
       if (message.author.bot) return;
-      if (message.content.split(" ").length == 1) return;
+      if (message.content.split(" ").length <= 1) return;
       if (message.content.startsWith(".")) return;
-
-      let state = true;
-      let replyMessageContent = "";
 
       if (state && message.author.id == this.lastPlayedTimeInfo.userId) {
         replyMessageContent = "Bạn đã chơi trước đó, vui lòng chờ lượt !";
@@ -92,7 +97,7 @@ export default class NoichuHandler extends Handler {
       if (state && this.lastPlayedTimeInfo.lastWord) {
         const lastWord_lastChar =
           this.lastPlayedTimeInfo.lastWord.split(" ")[
-            this.lastPlayedTimeInfo.lastWord.split(" ").length
+            this.lastPlayedTimeInfo.lastWord.split(" ").length - 1
           ];
 
         if (path.at(0) != lastWord_lastChar) {
