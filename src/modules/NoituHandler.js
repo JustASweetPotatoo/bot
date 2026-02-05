@@ -122,7 +122,6 @@ export default class NoichuHandler extends Handler {
       } catch (error) {
         replyMessageContent = `Từ **${message.content}** không có trong từ điển của bot`;
         state = false;
-
         this.client.logger.writeLog(error);
       }
 
@@ -131,6 +130,25 @@ export default class NoichuHandler extends Handler {
         this.lastPlayedTimeInfo.userId = message.author.id;
         this.lastPlayedTimeInfo.lastWord = message.content;
         this.lastPlayedTimeInfo.usedWordlist.push(message.content);
+
+        const remainList = Object.keys(dictionary[path[path.length - 1]]).filter(
+          (value) =>
+            !this.lastPlayedTimeInfo.usedWordlist.find((value1) => value == value1)
+        );
+
+        if (remainList.length == 0) {
+          message.channel.send({
+            embeds: [
+              new EmbedBuilder()
+                .setTitle(`Không còn từ khả dụng, làm mới !`)
+                .setColor(Colors.Blurple),
+            ],
+          });
+
+          this.lastPlayedTimeInfo.lastWord = undefined;
+          this.lastPlayedTimeInfo.userId = undefined;
+          this.lastPlayedTimeInfo.usedWordlist = [];
+        }
       } else {
         message.react("❌");
         message
@@ -145,24 +163,6 @@ export default class NoichuHandler extends Handler {
             }, 5000)
           );
         return;
-      }
-
-      const remainList = Object.keys(dictionary[path[path.length - 1]]).filter(
-        (value) => !this.lastPlayedTimeInfo.usedWordlist.find((value1) => value == value1)
-      );
-
-      if (remainList.length == 0) {
-        message.channel.send({
-          embeds: [
-            new EmbedBuilder()
-              .setTitle(`Không còn từ khả dụng, làm mới !`)
-              .setColor(Colors.Blurple),
-          ],
-        });
-
-        this.lastPlayedTimeInfo.lastWord = undefined;
-        this.lastPlayedTimeInfo.userId = undefined;
-        this.lastPlayedTimeInfo.usedWordlist = [];
       }
     } catch (error) {
       this.client.logger.writeLog(error);
