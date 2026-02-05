@@ -71,6 +71,10 @@ export default class NoichuHandler extends Handler {
         return;
       }
 
+      if (!this.lastPlayedTimeInfo.lastWord) {
+        this.lastPlayedTimeInfo.userId = undefined;
+      }
+
       if (message.author.bot) return;
       if (message.content.split(" ").length == 1) return;
       if (message.content.startsWith(".")) return;
