@@ -35,6 +35,21 @@ export default class NoichuHandler extends Handler {
       let state = true;
       let replyMessageContent = "";
 
+      message.content = message.content.toLowerCase();
+
+      if (
+        message.content.startsWith("reset") &&
+        message.author.id == "866628870123552798"
+      ) {
+        await message.reply({ content: "Game reset !" });
+        this.lastPlayedTimeInfo = {
+          ...this.lastPlayedTimeInfo,
+          userId: undefined,
+          lastWord: undefined,
+        };
+        return;
+      }
+
       if (message.content.toLowerCase().startsWith("lấy mẹo")) {
         if (!this.lastPlayedTimeInfo.lastWord || !this.lastPlayedTimeInfo.userId) {
           state = false;
