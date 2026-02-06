@@ -582,6 +582,16 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async mute(message, args) {
+    if (
+      !(
+        message.member.permissions.has("ModerateMembers") ||
+        message.member.permissions.has("Administrator")
+      )
+    ) {
+      await message.reply("You don't have permission to use this command !");
+      return;
+    }
+
     const userTarget = message.mentions.members.first();
 
     const reason = args.slice(3).join(" ") || "No reason provided";
