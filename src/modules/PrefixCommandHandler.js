@@ -99,7 +99,7 @@ export default class PrefixCommandHandler extends Handler {
     vinhhangcanh: "Lọ Đế Chí Tôn",
   };
 
-  prefix = "c>";
+  prefix = ">";
 
   constructor(options) {
     super(options);
@@ -200,7 +200,7 @@ export default class PrefixCommandHandler extends Handler {
   async onMessage(message) {
     if (message.content.startsWith(this.prefix)) {
       const args = message.content.split(" ");
-      const commandArgs = args[0].split(">");
+      const commandArgs = args[0].split(this.prefix);
 
       const command = this.commands[commandArgs[1]];
 
