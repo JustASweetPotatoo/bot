@@ -70,7 +70,9 @@ export default class NoichuHandler extends Handler {
         } else {
           const path = this.lastPlayedTimeInfo.lastWord.split(" ");
           const suggestWordlist = Object.keys(dictionary[path[path.length - 1]]).filter(
-            (value) => !this.usedWordlist.find((value1) => value == value1)
+            (value) =>
+              !this.usedWordlist.find((value1) => value == value1) &&
+              value.split(" ").length > 1
           );
 
           if (suggestWordlist.length == 0) {
@@ -177,7 +179,9 @@ export default class NoichuHandler extends Handler {
         }
 
         const remainList = keyList.filter(
-          (value) => !this.usedWordlist.find((value1) => value == value1)
+          (value) =>
+            !this.usedWordlist.find((value1) => value == value1) &&
+            value.split(" ").length > 1
         );
 
         if (remainList.length == 0) {
