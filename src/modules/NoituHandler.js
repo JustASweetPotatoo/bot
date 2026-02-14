@@ -21,8 +21,9 @@ export default class NoichuHandler extends Handler {
   lastPlayedTimeInfo = {
     userId: undefined,
     lastWord: undefined,
-    usedWordlist: [],
   };
+
+  usedWordlist = [];
 
   userConfig = [{ id: "1294142549937881102", enableChat: false }];
 
@@ -33,6 +34,8 @@ export default class NoichuHandler extends Handler {
   async onMessage(message) {
     try {
       if (message.channelId != this.channelId || message.guildId != this.guildId) return;
+
+      if (message.content.startsWith(">")) return;
 
       let userConfig = this.userConfig.find((config) => config.id === message.author.id);
 
@@ -52,10 +55,11 @@ export default class NoichuHandler extends Handler {
       ) {
         await message.reply({ content: "Game reset !" });
         this.lastPlayedTimeInfo = {
-          ...this.lastPlayedTimeInfo,
           userId: undefined,
           lastWord: undefined,
         };
+
+        this.usedWordlist = [];
         return;
       }
 
@@ -66,8 +70,7 @@ export default class NoichuHandler extends Handler {
         } else {
           const path = this.lastPlayedTimeInfo.lastWord.split(" ");
           const suggestWordlist = Object.keys(dictionary[path[path.length - 1]]).filter(
-            (value) =>
-              !this.lastPlayedTimeInfo.usedWordlist.find((value1) => value == value1)
+            (value) => !this.usedWordlist.find((value1) => value == value1)
           );
 
           if (suggestWordlist.length == 0) {
@@ -106,7 +109,7 @@ export default class NoichuHandler extends Handler {
       if (!this.lastPlayedTimeInfo.lastWord) {
         this.lastPlayedTimeInfo.userId = undefined;
       }
-      
+
       if (message.content.startsWith(".")) {
         if (message.content.startsWith(".chat")) {
           if (userConfig.enableChat == false) {
@@ -143,10 +146,7 @@ export default class NoichuHandler extends Handler {
         }
       }
 
-      if (
-        state &&
-        this.lastPlayedTimeInfo.usedWordlist.find((value) => message.content == value)
-      ) {
+      if (state && this.usedWordlist.find((value) => message.content == value)) {
         replyMessageContent = `"${message.content}" đã được sử dụng, vui lòng chọn từ khác !`;
         state = false;
       }
@@ -166,11 +166,18 @@ export default class NoichuHandler extends Handler {
         message.react("✅");
         this.lastPlayedTimeInfo.userId = message.author.id;
         this.lastPlayedTimeInfo.lastWord = message.content;
-        this.lastPlayedTimeInfo.usedWordlist.push(message.content);
+        this.usedWordlist.push(message.content);
 
-        const remainList = Object.keys(dictionary[path[path.length - 1]]).filter(
-          (value) =>
-            !this.lastPlayedTimeInfo.usedWordlist.find((value1) => value == value1)
+        const keyObj = dictionary[path[path.length - 1]];
+
+        let keyList = [];
+
+        if (keyObj) {
+          keyList = Object.keys(keyObj);
+        }
+
+        const remainList = keyList.filter(
+          (value) => !this.usedWordlist.find((value1) => value == value1)
         );
 
         if (remainList.length == 0) {
@@ -184,7 +191,6 @@ export default class NoichuHandler extends Handler {
 
           this.lastPlayedTimeInfo.lastWord = undefined;
           this.lastPlayedTimeInfo.userId = undefined;
-          this.lastPlayedTimeInfo.usedWordlist = [];
         }
       } else {
         message.react("❌");
