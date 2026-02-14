@@ -41,10 +41,6 @@ export default class NoichuHandler extends Handler {
         this.userConfig.push(userConfig);
       }
 
-      if (userConfig.enableChat) {
-        return;
-      }
-
       let state = true;
       let replyMessageContent = "";
 
@@ -110,9 +106,7 @@ export default class NoichuHandler extends Handler {
       if (!this.lastPlayedTimeInfo.lastWord) {
         this.lastPlayedTimeInfo.userId = undefined;
       }
-
-      if (message.author.bot) return;
-      if (message.content.split(" ").length <= 1) return;
+      
       if (message.content.startsWith(".")) {
         if (message.content.startsWith(".chat")) {
           if (userConfig.enableChat == false) {
@@ -125,6 +119,10 @@ export default class NoichuHandler extends Handler {
         }
         return;
       }
+      if (message.author.bot) return;
+      if (message.content.split(" ").length <= 1) return;
+
+      if (userConfig.enableChat) return;
 
       if (state && message.author.id == this.lastPlayedTimeInfo.userId) {
         replyMessageContent = "Bạn đã chơi trước đó, vui lòng chờ lượt !";
