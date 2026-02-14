@@ -24,6 +24,8 @@ export default class NoichuHandler extends Handler {
     usedWordlist: [],
   };
 
+  userConfig = [{ id: "1294142549937881102", enableChat: false }];
+
   /**
    *
    * @param {Message<true>} message
@@ -31,6 +33,17 @@ export default class NoichuHandler extends Handler {
   async onMessage(message) {
     try {
       if (message.channelId != this.channelId || message.guildId != this.guildId) return;
+
+      let userConfig = this.userConfig.find((config) => config.id === message.author.id);
+
+      if (!userConfig) {
+        userConfig = { id: message.author.id, enableChat: false };
+        this.userConfig.push(userConfig);
+      }
+
+      if (userConfig.enableChat) {
+        return;
+      }
 
       let state = true;
       let replyMessageContent = "";
@@ -100,7 +113,18 @@ export default class NoichuHandler extends Handler {
 
       if (message.author.bot) return;
       if (message.content.split(" ").length <= 1) return;
-      if (message.content.startsWith(".")) return;
+      if (message.content.startsWith(".")) {
+        if (message.content.startsWith(".chat")) {
+          if (userConfig.enableChat == false) {
+            userConfig.enableChat = true;
+            await message.reply("Chat enabled !");
+          } else {
+            userConfig.enableChat = false;
+            await message.reply("Chat disabled !");
+          }
+        }
+        return;
+      }
 
       if (state && message.author.id == this.lastPlayedTimeInfo.userId) {
         replyMessageContent = "Bạn đã chơi trước đó, vui lòng chờ lượt !";
