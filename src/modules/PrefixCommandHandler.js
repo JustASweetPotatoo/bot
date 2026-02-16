@@ -1,4 +1,5 @@
 import {
+  ChannelType,
   Collection,
   Colors,
   EmbedBuilder,
@@ -113,7 +114,10 @@ export default class PrefixCommandHandler extends Handler {
   async purge(message, args) {
     const channel = message.channel;
 
-    if (!(channel instanceof TextChannel || channel instanceof VoiceChannel)) return;
+    if (!channel.isTextBased()) {
+      console.log(channel.isTextBased());
+      return;
+    }
 
     let amount = 3;
     if (args[1]) {

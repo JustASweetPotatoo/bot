@@ -7,6 +7,7 @@ import AutoReplyHandler from "./modules/AutoReplyHandler.js";
 import UserService from "./database/UserService.js";
 import Logger from "./modules/Logger.js";
 import NoichuHandler from "./modules/NoituHandler.js";
+import NSFWHandler from "./modules/NSFWHandler.js";
 
 class MossClient extends Client {
   __systemPath = fileURLToPath(import.meta.url)
@@ -38,9 +39,20 @@ class MossClient extends Client {
     this.levelHandler = new LevelHandler({ client: this });
     this.autoReplyHandler = new AutoReplyHandler({ client: this });
     this.noichuHandler = new NoichuHandler({ client: this });
+    this.NSFWHandler = new NSFWHandler({ client: this });
 
     this.on(Events.Error, (error) => {
       this.logger.writeLog(error);
+    });
+
+    this.on(Events.InteractionCreate, async (interaction) => {
+      try {
+        if (interaction.isButton()) {
+          await this.NSFWHandler.onButtonInteractionCreate(interaction);
+        }
+      } catch (error) {
+        this.logger.writeLog(error);
+      }
     });
 
     this.on(Events.MessageCreate, async (message) => {
@@ -51,6 +63,7 @@ class MossClient extends Client {
         this.levelHandler.onMessage(message);
         this.autoReplyHandler.onMessage(message);
         this.noichuHandler.onMessage(message);
+        this.NSFWHandler.onMessage(message);
       } catch (error) {
         const replyMessage = await message.reply({
           embeds: [
