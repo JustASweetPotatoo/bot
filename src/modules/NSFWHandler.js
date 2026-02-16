@@ -154,6 +154,19 @@ export default class NSFWVerifyHandler extends Handler {
         .setDescription(`The request from <@${request.userId}> has been accepted!`)
         .setColor("Green");
 
+      if (!this.NSFWRole) {
+        this.NSFWRole = await interaction.guild.roles.fetch("1472545522576261171");
+      }
+
+      const member = await interaction.guild.members.fetch(request.userId);
+
+      if (!member) {
+        await interaction.reply({ content: "User not found!", ephemeral: true });
+        return;
+      }
+
+      await member.roles.add(this.NSFWRole);
+
       await interaction.message.edit({
         embeds: [embed],
         components: [actionRow],
