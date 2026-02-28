@@ -8,6 +8,7 @@ import UserService from "./database/UserService.js";
 import Logger from "./modules/Logger.js";
 import NoichuHandler from "./modules/NoituHandler.js";
 import NSFWHandler from "./modules/NSFWHandler.js";
+import PinMessageHandler from "./modules/PinMessagehandler.js";
 
 class MossClient extends Client {
   __systemPath = fileURLToPath(import.meta.url)
@@ -40,6 +41,7 @@ class MossClient extends Client {
     this.autoReplyHandler = new AutoReplyHandler({ client: this });
     this.noichuHandler = new NoichuHandler({ client: this });
     this.NSFWHandler = new NSFWHandler({ client: this });
+    this.pinMessageHandler = new PinMessageHandler({client: this});
 
     this.on(Events.Error, (error) => {
       this.logger.writeLog(error);
@@ -64,6 +66,7 @@ class MossClient extends Client {
         this.autoReplyHandler.onMessage(message);
         this.noichuHandler.onMessage(message);
         this.NSFWHandler.onMessage(message);
+        this.pinMessageHandler.onMessage(message);
       } catch (error) {
         const replyMessage = await message.reply({
           embeds: [

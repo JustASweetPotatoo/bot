@@ -64,6 +64,11 @@ export default class PrefixCommandHandler extends Handler {
       usage: "",
       function: this.mute,
     },
+    "create-pin": {
+      name: "create-pin",
+      usage: "",
+      function: this.createPinMessage,
+    },
   };
 
   tutien = {
@@ -104,6 +109,29 @@ export default class PrefixCommandHandler extends Handler {
 
   constructor(options) {
     super(options);
+  }
+
+  /**
+   *
+   * @param {Message<true>} message
+   * @param {Array<string>} args
+   */
+  async createPinMessage(message, args) {
+    if (
+      !(
+        message.member.permissions.has("ManageMessages") ||
+        message.member.permissions.has("Administrator")
+      )
+    ) {
+      sendTemporatyMessage(
+        message,
+        { content: "You don't have permission to use this command !" },
+        5000
+      );
+      return;
+    }
+
+    await this.client.pinMessageHandler.createPinMessage(message);
   }
 
   /**
