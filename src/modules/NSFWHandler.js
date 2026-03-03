@@ -167,6 +167,17 @@ export default class NSFWVerifyHandler extends Handler {
 
       await member.roles.add(this.NSFWRole);
 
+      member.send({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("Access Granted!")
+            .setDescription(
+              "You can now access <#875012636763365446> in Thiên Hà của Sứa.\nThnks for your patience!"
+            )
+            .setColor("Green"),
+        ],
+      });
+
       await interaction.message.edit({
         embeds: [embed],
         components: [actionRow],
