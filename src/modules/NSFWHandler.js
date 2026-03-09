@@ -4,6 +4,7 @@ import {
   ButtonInteraction,
   ButtonStyle,
   EmbedBuilder,
+  GuildMember,
   Message,
   PermissionFlagsBits,
 } from "discord.js";
@@ -61,6 +62,16 @@ export default class NSFWVerifyHandler extends Handler {
     }
 
     if (interaction.customId == "create_request") {
+      if (
+        !interaction.member.roles.cache.get((role) => role.id == "1301219249842556938")
+      ) {
+        await interaction.reply({
+          content: "You don't have role <@&1472808372561772574> to perform this action !",
+          flags: "Ephemeral",
+        });
+        return;
+      }
+
       let request = this.requestList.find(
         (request) => request.userId == interaction.user.id
       );
