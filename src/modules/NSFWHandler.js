@@ -58,7 +58,7 @@ export default class NSFWVerifyHandler extends Handler {
     }
 
     if (!this.requestChannel) {
-      this.requestChannel = await interaction.guild.channels.fetch("1472808372561772574");
+      this.requestChannel = await interaction.guild.channels.fetch("1303015244615913573");
     }
 
     if (interaction.customId == "create_request") {
