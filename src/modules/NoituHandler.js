@@ -165,7 +165,7 @@ export default class NoichuHandler extends Handler {
       }
 
       if (state) {
-        message.react("✅");
+        await message.react("✅");
         this.lastPlayedTimeInfo.userId = message.author.id;
         this.lastPlayedTimeInfo.lastWord = message.content;
         this.usedWordlist.push(message.content);
@@ -197,7 +197,7 @@ export default class NoichuHandler extends Handler {
           this.lastPlayedTimeInfo.userId = undefined;
         }
       } else {
-        message.react("❌");
+        await message.react("❌");
         message
           .reply({
             embeds: [
