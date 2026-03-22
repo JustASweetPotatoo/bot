@@ -43,11 +43,13 @@ jobs:
               git clone https://github.com/${GITHUB_REPOSITORY}.git ~/bot
               cd ~/bot
             fi
-            
+
             echo "Stopping old container (if exists)"
             docker stop bot || true
             docker rm bot || true
 
+            echo "DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}" > .env
+      
             echo "🐳 Deploy with Docker Compose..."
             docker compose down || true
             docker compose up -d --build
