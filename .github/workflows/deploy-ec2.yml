@@ -20,6 +20,9 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx (recommended for multi-platform builds)
+        uses: docker/setup-buildx-action@v4
+
       - name: Setup SSH key
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
@@ -27,35 +30,24 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
             set -e
 
-            # Pull latest code
+            echo "🚀 Pulling latest code..."
+
             if [ -d ~/bot ]; then
               cd ~/bot
-              git fetch origin master
+              git fetch origin
               git reset --hard origin/master
             else
-              git clone https://github.com/${{ github.repository }}.git ~/bot
+              git clone https://github.com/${GITHUB_REPOSITORY}.git ~/bot
               cd ~/bot
             fi
 
-            # Create docker volume for database persistence
-            docker volume create bot_data || true
+            echo "🐳 Deploy with Docker Compose..."
+            docker compose down || true
+            docker compose up -d --build
 
-            # Build new image
-            docker build -t bot ./
-
-            # Stop old container (if exists)
-            docker stop bot || true
-            docker rm bot || true
-
-            # Run new container, mounting the database file
-            docker run -d --name bot \
-              -e DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }} \
-              -v ~/database.db:/src/database/database.db \
-              --restart always \
-              bot
-
+            echo "🧹 Cleanup..."
             docker system prune -af
           EOF
