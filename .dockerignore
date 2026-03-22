@@ -1,1 +1,11 @@
 node_modules
+dist
+npm-debug.log
+dockerfile
+.git
+.aws
+.github
+.vscode
+test
+.gitignore
+package-lock.json

@@ -2,7 +2,7 @@ name: Deploy Docker to EC2
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "python-server"]
 
 env:
   AWS_REGION: ap-southeast-2
@@ -42,14 +42,6 @@ jobs:
 
             # Create docker volume for database persistence
             docker volume create bot_data || true
-
-            # Backup old database before removing old container
-            if docker ps -a --format '{{.Names}}' | grep -q "^bot$"; then
-              echo "Migrating old database..."
-              docker cp bot:/src/database/database.db /tmp/database.db || true
-              docker run --rm -v bot_data:/data -v /tmp:/tmp busybox \
-                sh -c "cp /tmp/database.db /data/database.db || true"
-            fi
 
             # Build new image
             docker build -t bot ./
