@@ -30,7 +30,7 @@ class MossClient extends Client {
       console.log(`Logged in as ${this.user.tag}`);
       this.logger.writeLog(`Logged in as ${this.user.tag}`);
     });
-
+    
     this.databaseManager = new DatabaseManager(this);
     this.logger = new Logger(this);
 
