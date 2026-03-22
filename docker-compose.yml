@@ -6,7 +6,7 @@ services:
     container_name: bot
     restart: always
     environment:
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
     volumes:
       - ~/database.db:/app/database/database.db
     depends_on:
