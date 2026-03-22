@@ -105,7 +105,10 @@ export default class AutoReplyHandler extends Handler {
 
       if (!path) return;
 
-      const sendMessage = await message.reply({ files: [path] });
+      const sendMessage = await message.channel.send({
+        content: `From <@${message.author.id}> - Content: ${message.content}`,
+        files: [path],
+      });
 
       cache[videoReelId] = sendMessage.attachments.at(0).proxyURL;
 
