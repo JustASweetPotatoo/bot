@@ -1,4 +1,4 @@
-import { Message } from "discord.js";
+import { Colors, EmbedBuilder, Message } from "discord.js";
 import Handler from "./Handler.js";
 import fs from "fs";
 import { pipeline } from "stream/promises";
@@ -106,9 +106,22 @@ export default class AutoReplyHandler extends Handler {
       if (!path) return;
 
       const sendMessage = await message.channel.send({
-        content: `From <@${message.author.id}> - Content: ${message.content}`,
+        embeds: [
+          new EmbedBuilder()
+            .setAuthor({
+              name: message.author.username,
+              iconURL: message.author.avatarURL(),
+            })
+            .setTitle(`From ${message.author.username}`)
+            .setDescription(`Link <${findFBUrl(message.content)}>`)
+            .setColor(Colors.Blurple)
+            .setFooter({ text: `Powered by Discord-Potarozz` })
+            .setTimestamp(),
+        ],
         files: [path],
       });
+
+      if (message.deletable) await message.delete();
 
       cache[videoReelId] = sendMessage.attachments.at(0).proxyURL;
 
