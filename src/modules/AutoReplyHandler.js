@@ -114,6 +114,8 @@ export default class AutoReplyHandler extends Handler {
       if (cache[videoReelId]) {
         await this.webhookClient.send({
           content: wrapLinks(message.content) + `\n${cache[videoReelId]}`,
+          username: message.author.displayName,
+          avatarURL: message.author.avatarURL(),
         });
         return;
       }
