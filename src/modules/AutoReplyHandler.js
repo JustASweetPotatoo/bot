@@ -1,7 +1,9 @@
-import { Colors, EmbedBuilder, Message, TextChannel, WebhookClient } from "discord.js";
+import { Message, WebhookClient } from "discord.js";
 import Handler from "./Handler.js";
 import fs from "fs";
 import { pipeline } from "stream/promises";
+
+const { PYTHON_API } = process.env;
 
 /**
  *
@@ -22,7 +24,7 @@ function findFBUrl(content) {
 async function linkConvert(message) {
   const url = findFBUrl(message.content);
   if (!url) return;
-  return url.replace("https://www.facebook.com", "http://python:9812");
+  return url.replace("https://www.facebook.com", PYTHON_API);
 }
 
 function extractVideoLink(html) {

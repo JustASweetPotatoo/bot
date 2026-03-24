@@ -1,15 +1,17 @@
 import mysql from "mysql2/promise";
 
+const { DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME } = process.env;
+
 export default class DatabaseManager {
   constructor(client) {
     this.client = client;
 
     this.pool = mysql.createPool({
-      host: "localhost",
-      port: 3306,
-      user: "root",
-      password: "Admin@123",
-      database: "bot",
+      host: DB_HOST,
+      port: DB_PORT,
+      user: DB_USER,
+      password: DB_PASS,
+      database: DB_NAME,
     });
   }
 
