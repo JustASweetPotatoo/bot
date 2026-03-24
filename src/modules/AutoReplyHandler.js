@@ -55,6 +55,15 @@ async function downloadVideo(url, path = "video.mp4") {
   return path;
 }
 
+/**
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+const wrapLinks = (text) => {
+  return text.replace(/\b((https?:\/\/|www\.)[^\s]+)/g, (url) => `<${url}>`);
+};
+
 const cache = {};
 
 export default class AutoReplyHandler extends Handler {
@@ -96,8 +105,16 @@ export default class AutoReplyHandler extends Handler {
 
       if (!videoLink) return;
 
+      if (!this.webhookClient) {
+        this.webhookClient = new WebhookClient({
+          url: "https://discord.com/api/webhooks/1485841575912280105/Iv-_YLIYRqAL9PTbPtu2lQzRyqOa6OPprkDJxuHo7oy9o0nOGQuNTcPg3eY9OLeRl3Oz",
+        });
+      }
+
       if (cache[videoReelId]) {
-        await message.reply({ content: cache[videoReelId] });
+        await this.webhookClient.send({
+          content: wrapLinks(message.content) + `\n${cache[videoReelId]}`,
+        });
         return;
       }
 
@@ -105,14 +122,8 @@ export default class AutoReplyHandler extends Handler {
 
       if (!path) return;
 
-      if (!this.webhookClient) {
-        this.webhookClient = new WebhookClient({
-          url: "https://discord.com/api/webhooks/1485841575912280105/Iv-_YLIYRqAL9PTbPtu2lQzRyqOa6OPprkDJxuHo7oy9o0nOGQuNTcPg3eY9OLeRl3Oz",
-        });
-      }
-
-      await this.webhookClient.send({
-        content: message.content,
+      const messageSent = await this.webhookClient.send({
+        content: wrapLinks(message.content),
         username: message.author.displayName,
         avatarURL: message.author.avatarURL(),
         files: [path],
