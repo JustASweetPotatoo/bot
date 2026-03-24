@@ -147,7 +147,7 @@ export default class AutoReplyHandler extends Handler {
 
       if (message.deletable) await message.delete();
 
-      cache[videoReelId] = sendMessage.attachments.at(0).proxyURL;
+      cache[videoReelId] = messageSent.attachments.at(0).proxy_url;
 
       if (fs.readFileSync(path));
       fs.unlinkSync(path);
