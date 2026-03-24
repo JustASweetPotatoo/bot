@@ -1,4 +1,4 @@
-import { Colors, EmbedBuilder, Message } from "discord.js";
+import { Colors, EmbedBuilder, Message, TextChannel, WebhookClient } from "discord.js";
 import Handler from "./Handler.js";
 import fs from "fs";
 import { pipeline } from "stream/promises";
@@ -105,21 +105,34 @@ export default class AutoReplyHandler extends Handler {
 
       if (!path) return;
 
-      const sendMessage = await message.channel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setAuthor({
-              name: message.author.username,
-              iconURL: message.author.avatarURL(),
-            })
-            .setTitle(`From ${message.author.username}`)
-            .setDescription(`Link <${findFBUrl(message.content)}>`)
-            .setColor(Colors.Blurple)
-            .setFooter({ text: `Powered by Discord-Potarozz` })
-            .setTimestamp(),
-        ],
+      if (!this.webhookClient) {
+        this.webhookClient = new WebhookClient({
+          url: "https://discord.com/api/webhooks/1485841575912280105/Iv-_YLIYRqAL9PTbPtu2lQzRyqOa6OPprkDJxuHo7oy9o0nOGQuNTcPg3eY9OLeRl3Oz",
+        });
+      }
+
+      await this.webhookClient.send({
+        content: message.content,
+        username: message.author.displayName,
+        avatarURL: message.author.avatarURL(),
         files: [path],
       });
+
+      // const sendMessage = await message.channel.send({
+      //   embeds: [
+      //     new EmbedBuilder()
+      //       .setAuthor({
+      //         name: message.author.username,
+      //         iconURL: message.author.avatarURL(),
+      //       })
+      //       .setTitle(`From ${message.author.username}`)
+      //       .setDescription(`Link <${findFBUrl(message.content)}>`)
+      //       .setColor(Colors.Blurple)
+      //       .setFooter({ text: `Powered by Discord-Potarozz` })
+      //       .setTimestamp(),
+      //   ],
+      //   files: [path],
+      // });
 
       if (message.deletable) await message.delete();
 
