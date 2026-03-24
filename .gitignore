@@ -6,3 +6,4 @@ database.db
 debug.js
 
 /test/*
+*.sql

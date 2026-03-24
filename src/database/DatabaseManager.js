@@ -1,40 +1,38 @@
-import { open } from "sqlite";
-import sqlite3 from "sqlite3";
-import * as path from "path";
-
-import MossClient from "../Client.js";
+import mysql from "mysql2/promise";
 
 export default class DatabaseManager {
-  /**
-   * @param {MossClient} client
-   */
   constructor(client) {
     this.client = client;
+
+    this.pool = mysql.createPool({
+      host: "localhost",
+      port: 3306,
+      user: "root",
+      password: "Admin@123",
+      database: "bot",
+    });
   }
 
-  createConnection = async () => {
-    let err = null;
+  async createConnection() {
+    await this.createTable();
+  }
 
-    await open({
-      filename: path.join(this.client.__systemPath, "./database/database.db"),
-      driver: sqlite3.Database,
-    })
-      .then(async (db) => {
-        this.db = db;
-        await this.createTable();
-      })
-      .catch((error) => {
-        err = error;
-      });
+  async createTable() {
+    await this.executeQuery(`
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(64) NOT NULL,
+        xp BIGINT DEFAULT 0,
+        level BIGINT DEFAULT 0,
+        message_count BIGINT DEFAULT 0,
+        achivement_id VARCHAR(64) NULL,
+        PRIMARY KEY (id)
+      );
+    `);
+  }
 
-    if (err) console.log(err);
-
-    return err;
-  };
-
-  createTable = async () => {
-    await this.db.run(
-      "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, xp NUMBER DEFAULT(0), level NUMBER DEFAULT(0), message_count NUMBER DEFAULT(0), achivement_id TEXT);"
-    );
-  };
+  async executeQuery(query, values) {
+    if (!this.pool) return [];
+    const [rows] = await this.pool.query(query, values);
+    return rows;
+  }
 }

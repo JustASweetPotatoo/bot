@@ -291,15 +291,7 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async getNumberMessageSent(message, args) {
-    let re = await this.client.databaseManager.db.get(
-      "SELECT * FROM users WHERE id = ?",
-      [args[1]],
-      (err, row) => {
-        if (err) {
-          console.log(err);
-        }
-      }
-    );
+    let re = await this.client.userService.get(args[1]);
 
     if (re && re.id) {
       const user = await message.guild.members.fetch(re.id);
@@ -439,7 +431,7 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async getTopLevel(message, args) {
-    const allUsers = await this.client.databaseManager.db.all(
+    const allUsers = await this.client.userService.getAllOrderByXp(
       "SELECT * FROM users ORDER BY xp DESC LIMIT 10;",
       [],
       (err, rows) => {
@@ -560,16 +552,13 @@ export default class PrefixCommandHandler extends Handler {
 
       if (!member) continue;
 
-      await this.client.databaseManager.db.run(
-        `INSERT INTO users (id, xp, level, message_count, achivement_id) 
-          VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE 
-            SET xp = excluded.xp, 
-                level = excluded.level, 
-                message_count = excluded.message_count,
-                achivement_id = excluded.achivement_id
-        ;`,
-        [id, parseInt(xp), parseInt(level), parseInt(message_count), achivement_id]
-      );
+      await this.client.userService.insert({
+        id: id,
+        xp: parseInt(xp),
+        level: parseInt(level),
+        message_count: parseInt(message_count),
+        achivement_id: achivement_id,
+      });
     }
 
     message.reply(`Updated ${lines.length} users into database.`);
