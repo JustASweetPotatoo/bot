@@ -1,4 +1,4 @@
-import { Message, WebhookClient } from "discord.js";
+import { Colors, EmbedBuilder, Message, WebhookClient } from "discord.js";
 import Handler from "./Handler.js";
 import fs from "fs";
 import { pipeline } from "stream/promises";
