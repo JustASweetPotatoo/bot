@@ -126,32 +126,36 @@ export default class AutoReplyHandler extends Handler {
 
       if (!path) return;
 
-      const messageSent = await this.webhookClient.send({
-        content: wrapLinks(message.content),
-        username: message.author.displayName,
-        avatarURL: message.author.avatarURL(),
-        files: [path],
-      });
+      let msg;
 
-      // const sendMessage = await message.channel.send({
-      //   embeds: [
-      //     new EmbedBuilder()
-      //       .setAuthor({
-      //         name: message.author.username,
-      //         iconURL: message.author.avatarURL(),
-      //       })
-      //       .setTitle(`From ${message.author.username}`)
-      //       .setDescription(`Link <${findFBUrl(message.content)}>`)
-      //       .setColor(Colors.Blurple)
-      //       .setFooter({ text: `Powered by Discord-Potarozz` })
-      //       .setTimestamp(),
-      //   ],
-      //   files: [path],
-      // });
+      if (message.channelId != "1324329968423141437") {
+        msg = await message.channel.send({
+          embeds: [
+            new EmbedBuilder()
+              .setAuthor({
+                name: message.author.username,
+                iconURL: message.author.avatarURL(),
+              })
+              .setTitle(`From ${message.author.username}`)
+              .setDescription(`Link <${findFBUrl(message.content)}>`)
+              .setColor(Colors.Blurple)
+              .setFooter({ text: `Powered by Discord-Potarozz` })
+              .setTimestamp(),
+          ],
+          files: [path],
+        });
+      } else {
+        msg = await this.webhookClient.send({
+          content: wrapLinks(message.content),
+          username: message.author.displayName,
+          avatarURL: message.author.avatarURL(),
+          files: [path],
+        });
+      }
 
       if (message.deletable) await message.delete();
 
-      cache[videoReelId] = messageSent.attachments.at(0).proxy_url;
+      cache[videoReelId] = msg.attachments.at(0).proxy_url;
 
       if (fs.readFileSync(path));
       fs.unlinkSync(path);
