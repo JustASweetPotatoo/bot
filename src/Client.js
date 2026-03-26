@@ -27,10 +27,18 @@ class MossClient extends Client {
     });
 
     this.on(Events.ClientReady, () => {
+      this.user.setPresence({
+        activities: [
+          {
+            name: "Powered by Potarozz",
+          },
+        ],
+      });
+
       console.log(`Logged in as ${this.user.tag}`);
       this.logger.writeLog(`Logged in as ${this.user.tag}`);
     });
-    
+
     this.databaseManager = new DatabaseManager(this);
     this.logger = new Logger(this);
 
@@ -41,7 +49,7 @@ class MossClient extends Client {
     this.autoReplyHandler = new AutoReplyHandler({ client: this });
     this.noichuHandler = new NoichuHandler({ client: this });
     this.NSFWHandler = new NSFWHandler({ client: this });
-    this.pinMessageHandler = new PinMessageHandler({client: this});
+    this.pinMessageHandler = new PinMessageHandler({ client: this });
 
     this.on(Events.Error, (error) => {
       this.logger.writeLog(error);
