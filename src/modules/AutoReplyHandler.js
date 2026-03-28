@@ -1,8 +1,17 @@
-import { Colors, EmbedBuilder, Message, WebhookClient } from "discord.js";
+import {
+  Collection,
+  Colors,
+  EmbedBuilder,
+  Message,
+  TextChannel,
+  WebhookClient,
+} from "discord.js";
 import Handler from "./Handler.js";
 import fs from "fs";
 import { pipeline } from "stream/promises";
+import { configDotenv } from "dotenv";
 
+configDotenv();
 const { PYTHON_API } = process.env;
 
 /**
@@ -69,6 +78,8 @@ const wrapLinks = (text) => {
 const cache = {};
 
 export default class AutoReplyHandler extends Handler {
+  webhookClients = new Collection();
+
   autoReplyData = [
     {
       match: "mmb",
@@ -107,14 +118,35 @@ export default class AutoReplyHandler extends Handler {
 
       if (!videoLink) return;
 
-      if (!this.webhookClient) {
-        this.webhookClient = new WebhookClient({
-          url: "https://discord.com/api/webhooks/1485841575912280105/Iv-_YLIYRqAL9PTbPtu2lQzRyqOa6OPprkDJxuHo7oy9o0nOGQuNTcPg3eY9OLeRl3Oz",
-        });
+      let webhookClient = this.webhookClients.get({
+        channelId: message.channelId,
+        guildId: message.guildId,
+      });
+
+      if (!webhookClient) {
+        let wb = (await message.channel.fetchWebhooks()).find(
+          (wb) => wb.owner.id == this.client.user.id
+        );
+
+        if (!wb) {
+          wb = await message.channel.createWebhook({
+            name: this.client.user.displayName,
+          });
+        }
+
+        webhookClient = new WebhookClient({ url: wb.url });
+
+        this.webhookClients.set(
+          {
+            channelId: message.channelId,
+            guildId: message.guildId,
+          },
+          webhookClient.url
+        );
       }
 
       if (cache[videoReelId]) {
-        await this.webhookClient.send({
+        await webhookClient.send({
           content: wrapLinks(message.content) + `\n${cache[videoReelId]}`,
           username: message.author.displayName,
           avatarURL: message.author.avatarURL(),
@@ -126,32 +158,24 @@ export default class AutoReplyHandler extends Handler {
 
       if (!path) return;
 
-      let msg;
+      const reference = message.reference;
 
-      if (message.channelId != "1324329968423141437") {
-        msg = await message.channel.send({
-          embeds: [
-            new EmbedBuilder()
-              .setAuthor({
-                name: message.author.username,
-                iconURL: message.author.avatarURL(),
-              })
-              .setTitle(`From ${message.author.username}`)
-              .setDescription(`Link <${findFBUrl(message.content)}>`)
-              .setColor(Colors.Blurple)
-              .setFooter({ text: `Powered by Discord-Potarozz` })
-              .setTimestamp(),
-          ],
-          files: [path],
-        });
-      } else {
-        msg = await this.webhookClient.send({
-          content: wrapLinks(message.content),
-          username: message.author.displayName,
-          avatarURL: message.author.avatarURL(),
-          files: [path],
-        });
+      let msg;
+      let referenceMessage;
+
+      if (reference) {
+        referenceMessage = await message.channel.messages.fetch(reference.messageId);
       }
+
+      msg = await webhookClient.send({
+        content:
+          wrapLinks(message.content) +
+          (referenceMessage ? `\n*Replied to ${message.url}*` : "") +
+          "\n> Toki Bot - Powered by **Potarozz***",
+        username: message.author.displayName,
+        avatarURL: message.author.avatarURL(),
+        files: [path],
+      });
 
       if (message.deletable) await message.delete();
 
