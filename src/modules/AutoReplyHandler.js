@@ -204,7 +204,7 @@ export default class AutoReplyHandler extends Handler {
           content:
             wrapLinks(message.content) +
             (referenceMessage ? `\n*Replied to ${message.url}*` : "") +
-            "\n> Toki Bot - Powered by **Potarozz***",
+            "\n> *Toki Bot - Powered by **Potarozz***",
           username: message.author.displayName,
           avatarURL: message.author.avatarURL(),
           files: [path],
