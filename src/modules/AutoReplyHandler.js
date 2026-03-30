@@ -41,6 +41,26 @@ function extractVideoLink(html) {
   return match ? match[1] : null;
 }
 
+function extractImageLink(html) {
+  const match = html.match(/<meta property="og:image" content="([^"]+)"/);
+  return match ? match[1] : null;
+}
+
+function extractPostDescription(html) {
+  const match = html.match(/<meta property="og:description" content="([^"]+)"/);
+  return match ? match[1] : null;
+}
+
+function extractPostTitle(html) {
+  const match = html.match(/<meta property="og:title" content="([^"]+)"/);
+  return match ? match[1] : null;
+}
+
+function trimEmbed(text, max = 4096) {
+  if (text.length <= max) return text;
+  return text.slice(0, max - 3) + "...";
+}
+
 function extractReelId(html) {
   const match = html.match(
     /<meta property="og:url" content="https:\/\/www\.facebook\.com\/reel\/(\d+)"/
@@ -101,6 +121,42 @@ export default class AutoReplyHandler extends Handler {
 
   /**
    *
+   * @param {import("discord.js").GuildBasedChannel} channel
+   * @returns {Promise<WebhookClient>}
+   */
+  async createWebhook(channel) {
+    let webhookClient = this.webhookClients.get({
+      channelId: channel.id,
+      guildId: channel.guildId,
+    });
+
+    if (!webhookClient) {
+      let wb = (await channel.fetchWebhooks()).find(
+        (wb) => wb.owner.id == this.client.user.id
+      );
+
+      if (!wb) {
+        wb = await channel.createWebhook({
+          name: this.client.user.displayName,
+        });
+      }
+
+      webhookClient = new WebhookClient({ url: wb.url });
+
+      this.webhookClients.set(
+        {
+          channelId: channel.id,
+          guildId: channel.guildId,
+        },
+        webhookClient.url
+      );
+
+      return webhookClient;
+    }
+  }
+
+  /**
+   *
    * @param {Message<true>} message
    */
   async processFacebookUrl(message) {
@@ -115,48 +171,11 @@ export default class AutoReplyHandler extends Handler {
 
       const videoLink = extractVideoLink(text);
       const videoReelId = extractReelId(text);
+      const imageLink = extractImageLink(text);
+      const postDescription = extractPostDescription(text);
+      const postTitle = extractPostTitle(text);
 
-      if (!videoLink) return;
-
-      let webhookClient = this.webhookClients.get({
-        channelId: message.channelId,
-        guildId: message.guildId,
-      });
-
-      if (!webhookClient) {
-        let wb = (await message.channel.fetchWebhooks()).find(
-          (wb) => wb.owner.id == this.client.user.id
-        );
-
-        if (!wb) {
-          wb = await message.channel.createWebhook({
-            name: this.client.user.displayName,
-          });
-        }
-
-        webhookClient = new WebhookClient({ url: wb.url });
-
-        this.webhookClients.set(
-          {
-            channelId: message.channelId,
-            guildId: message.guildId,
-          },
-          webhookClient.url
-        );
-      }
-
-      if (cache[videoReelId]) {
-        await webhookClient.send({
-          content: wrapLinks(message.content) + `\n${cache[videoReelId]}`,
-          username: message.author.displayName,
-          avatarURL: message.author.avatarURL(),
-        });
-        return;
-      }
-
-      const path = await downloadVideo(videoLink, `${videoReelId}.mp4`);
-
-      if (!path) return;
+      const webhookClient = await this.createWebhook(message.channel);
 
       const reference = message.reference;
 
@@ -167,22 +186,55 @@ export default class AutoReplyHandler extends Handler {
         referenceMessage = await message.channel.messages.fetch(reference.messageId);
       }
 
-      msg = await webhookClient.send({
-        content:
-          wrapLinks(message.content) +
-          (referenceMessage ? `\n*Replied to ${message.url}*` : "") +
-          "\n> Toki Bot - Powered by **Potarozz***",
-        username: message.author.displayName,
-        avatarURL: message.author.avatarURL(),
-        files: [path],
-      });
+      if (videoLink && videoReelId) {
+        if (cache[videoReelId]) {
+          await webhookClient.send({
+            content: wrapLinks(message.content) + `\n${cache[videoReelId]}`,
+            username: message.author.displayName,
+            avatarURL: message.author.avatarURL(),
+          });
+          return;
+        }
 
-      if (message.deletable) await message.delete();
+        const path = await downloadVideo(videoLink, `${videoReelId}.mp4`);
 
-      cache[videoReelId] = msg.attachments.at(0).proxy_url;
+        if (!path) return;
 
-      if (fs.readFileSync(path));
-      fs.unlinkSync(path);
+        msg = await webhookClient.send({
+          content:
+            wrapLinks(message.content) +
+            (referenceMessage ? `\n*Replied to ${message.url}*` : "") +
+            "\n> Toki Bot - Powered by **Potarozz***",
+          username: message.author.displayName,
+          avatarURL: message.author.avatarURL(),
+          files: [path],
+        });
+
+        if (message.deletable) await message.delete();
+
+        cache[videoReelId] = msg.attachments.at(0).proxy_url;
+
+        if (fs.readFileSync(path));
+        fs.unlinkSync(path);
+      } else if (imageLink) {
+        await webhookClient.send({
+          content:
+            wrapLinks(message.content) +
+            (referenceMessage ? `\n*Replied to ${message.url}*` : ""),
+          embeds: [
+            {
+              title: postTitle,
+              description: trimEmbed(postDescription),
+              image: { url: imageLink },
+              color: Colors.Blurple,
+              footer: { text: `Toki Bot - Powered by Potarozz` },
+              timestamp: new Date(),
+            },
+          ],
+          username: message.author.displayName,
+          avatarURL: message.author.avatarURL(),
+        });
+      }
     } catch (error) {
       this.client.logger.writeLog(error);
     }
