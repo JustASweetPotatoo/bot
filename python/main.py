@@ -127,65 +127,54 @@ class Utils:
 
 
 class Jq:
-    @staticmethod
-    def enumerate(obj: dict):
-        result = []
-
-        def collect(value):
-            if isinstance(value, dict):
-                result.append(value)
-                for v in value.values():
-                    if isinstance(v, list):
-                        collect(v)
-                for v in value.values():
-                    if isinstance(v, dict):
-                        collect(v)
-                for v in value.values():
-                    if not isinstance(v, (dict, list)):
-                        collect(v)
-            elif isinstance(value, list):
-                for item in value:
-                    if isinstance(item, dict):
-                        collect(item)
-                for item in value:
-                    if isinstance(item, list):
-                        collect(item)
-                for item in value:
-                    if not isinstance(item, (dict, list)):
-                        collect(item)
-
-        collect(obj)
-        return result
 
     @staticmethod
-    def iterate(obj: dict, key: str, first: bool = False):
-        result = []
-        for oo in Jq.enumerate(obj):
-            if key in oo:
+    def _walk(obj):
+        if isinstance(obj, dict):
+            yield obj
+            for v in obj.values():
+                yield from Jq._walk(v)
+
+        elif isinstance(obj, list):
+            for item in obj:
+                yield from Jq._walk(item)
+
+    @staticmethod
+    def iterate(obj, key, first=False):
+        results = []
+
+        for node in Jq._walk(obj):
+            if key in node:
                 if first:
-                    return oo[key]
-                else:
-                    result.append(oo[key])
-        return result
+                    return node[key]
+                results.append(node[key])
+
+        return results
 
     @staticmethod
-    def all(obj: dict, key: str) -> list[dict]:
-        return Jq.iterate(obj, key, first=False)
-
-    @staticmethod
-    def first(obj: dict, key: str) -> dict:
+    def first(obj, key):
         return Jq.iterate(obj, key, first=True)
 
     @staticmethod
-    def has(obj: dict, *args: str) -> bool:
-        for k in args:
-            if not Jq.first(obj, k):
+    def all(obj, key):
+        return Jq.iterate(obj, key)
+
+    @staticmethod
+    def has(obj, *keys):
+        for k in keys:
+            found = False
+            for node in Jq._walk(obj):
+                if k in node:
+                    found = True
+                    break
+            if not found:
                 return False
         return True
 
     @staticmethod
-    def last(obj: dict, key: str) -> dict:
-        return Jq.iterate(obj, key)[-1]
+    def last(obj, key):
+        vals = Jq.iterate(obj, key)
+        return vals[-1] if vals else None
 
 
 class Cookies:
@@ -727,11 +716,15 @@ class ReelsParser:
 
 class VideoWatchParser:
     # excluding group post video since they are handled by jsonparser
+
     @staticmethod
     def get_op_name(html_parser: BeautifulSoup) -> str:
-        for bloc in JsonParser.get_json_blocks(html_parser, sort=False):
-            if Jq.has(bloc, "is_additional_profile_plus"):
-                return Jq.first(bloc, "owner")["name"]
+        json_blocks = JsonParser.get_json_blocks(html_parser, sort=False)
+
+        for json_block in json_blocks:
+            if Jq.has(json_block, "is_additional_profile_plus"):
+                return Jq.first(json_block, "owner")["name"]
+
         raise FacebedException("Invalid watch link (opn)")
 
     @staticmethod
@@ -744,9 +737,10 @@ class VideoWatchParser:
     @staticmethod
     def get_date(html_parser: BeautifulSoup) -> int:
         for json_block in JsonParser.get_json_blocks(html_parser):
-            if "creation_time" in json_block:
+            if Jq.has(json_block, "creation_time"):
                 #   noinspection PyTypeChecker
-                return int(Jq.first(json.loads(json_block), "creation_time"))
+                creation_time = Jq.first(json_block, "creation_time")
+                return int(creation_time)
         raise FacebedException("cannot find date")
 
     @staticmethod
