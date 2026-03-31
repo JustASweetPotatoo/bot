@@ -30,6 +30,10 @@ async function linkConvert(message) {
   return url.replace("https://www.facebook.com", PYTHON_API);
 }
 
+function facebedLinkConvert(content) {
+  return content.replace("https://www.facebook.com", "https://www.facebed.com");
+}
+
 function trimEmbed(text, max = 4096) {
   if (text.length <= max) return text;
   return text.slice(0, max - 3) + "...";
@@ -164,39 +168,50 @@ export default class AutoReplyHandler extends Handler {
       }
 
       if (postData.videoLink) {
-        if (cache[postData.videoReelId]) {
+        if (cache[postData.reelId]) {
           await webhookClient.send({
-            content: wrapLinks(message.content) + `\n${cache[postData.videoReelId]}`,
+            content: wrapLinks(message.content) + `\n${cache[postData.reelId]}`,
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
           });
           return;
         }
 
-        const path = await downloadVideo(postData.videoLink, `${postData.videoReelId}.mp4`);
+        const path = await downloadVideo(
+          postData.videoLink,
+          `${postData.reelId}.mp4`
+        );
+        const videoStats = fs.statSync(path);
 
         if (!path) return;
 
-        msg = await webhookClient.send({
-          content:
-            wrapLinks(message.content) +
-            (referenceMessage ? `\n*Replied to ${message.url}*` : ""),
-          username: message.author.displayName,
-          avatarURL: message.author.avatarURL(),
-          files: [path],
-          embeds: [
-            {
-              description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
-              color: Colors.Blurple,
-              footer: { text: `UID: ${message.author.id}` },
-              timestamp: new Date(),
-            },
-          ],
-        });
+        if (videoStats.size >= 10 * 1024 * 1024) {
+          await message.reply({
+            content: `File size too large, use facebed API instead!\n${facebedLinkConvert(
+              facebookLink
+            )}`,
+          });
+        } else {
+          msg = await webhookClient.send({
+            content:
+              wrapLinks(message.content) +
+              (referenceMessage ? `\n*Replied to ${message.url}*` : ""),
+            username: message.author.displayName,
+            avatarURL: message.author.avatarURL(),
+            files: videoStats.size < 10 * 1024 * 1024 ? [path] : [],
+            embeds: [
+              {
+                description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
+                color: Colors.Blurple,
+                footer: { text: `UID: ${message.author.id}` },
+                timestamp: new Date(),
+              },
+            ],
+          });
 
-        if (message.deletable) await message.delete();
-
-        cache[postData.videoReelId] = msg.attachments.at(0).proxy_url;
+          cache[postData.reelId] = msg.attachments.at(0).proxy_url;
+          if (message.deletable) await message.delete();
+        }
 
         if (fs.readFileSync(path));
         fs.unlinkSync(path);
