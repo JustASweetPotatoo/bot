@@ -1,4 +1,5 @@
 import {
+  AttachmentBuilder,
   ChannelType,
   Collection,
   Colors,
@@ -11,6 +12,7 @@ import {
 import Handler from "./Handler.js";
 import { calcLevel, getTotalXpForLevel } from "../utils/random.js";
 import { sendTemporatyMessage } from "../utils/autoMessage.js";
+import generateRankCard from "../utils/utils.js";
 
 export default class PrefixCommandHandler extends Handler {
   commands = {
@@ -422,7 +424,27 @@ export default class PrefixCommandHandler extends Handler {
       author: { name: mentionedUser.username, iconURL: mentionedUser.avatarURL() },
     }).setTimestamp();
 
-    await message.reply({ embeds: [embed1] });
+    // await message.reply({ embeds: [embed1] });
+
+    const role = message.guild.roles.cache.get(res.achivement_id);
+
+    const buffer = await generateRankCard({
+      username: mentionedUser.username,
+      level: res.level,
+      avatarUrl: mentionedUser.displayAvatarURL(),
+      totalXp: res.xp,
+      xp: res.xp - getTotalXpForLevel(res.level),
+      badgeName: role?.name,
+      maxXp: getTotalXpForLevel(res.level) - getTotalXpForLevel(res.level - 1),
+    });
+
+    const attachment = new AttachmentBuilder(buffer, {
+      name: "rank.png",
+    });
+
+    await message.reply({
+      files: [attachment],
+    });
   }
 
   /**
