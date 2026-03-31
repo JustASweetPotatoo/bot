@@ -779,15 +779,15 @@ class VideoWatchParser:
 def format_error_message_embed(original_url: str) -> str:
     return Utils.prettify(
         f"""<!DOCTYPE html>
-<html lang="">
-<head>
-<meta charset="UTF-8" />
-    <meta name="theme-color" content="#2c3048f" />
-    <meta property="og:title" content="Log in or sign up to view"/>
-    <meta property="og:description" content="See posts, photos and more on Facebook.\nIf viewable in incognito report to git.facebed.com."/>
-    <meta http-equiv="refresh" content="0;url={quote(original_url)}"/>
-</head>
-</html>"""
+            <html lang="">
+                <head>
+                <meta charset="UTF-8" />
+                    <meta name="theme-color" content="#2c3048f" />
+                    <meta property="og:title" content="Log in or sign up to view"/>
+                    <meta property="og:description" content="See posts, photos and more on Facebook.\nIf viewable in incognito report to git.facebed.com."/>
+                    <meta http-equiv="refresh" content="0;url={quote(original_url)}"/>
+                </head>
+            </html>"""
     )
 
 
@@ -860,39 +860,39 @@ def format_full_post_embed(post: ParsedPost) -> str:
     # TODO: organize and duplicate the neccessary tags
     return Utils.prettify(
         f"""<!DOCTYPE html>
-        <html lang="">
-        <head>
-            <title>{get_credit()}</title>
-            <meta charset="UTF-8"/>
-            <meta property="og:title" content="{escape(post.author_name)}"/>
-            <meta property="og:description" content="{escape(post.text[:1024])}"/>
-            <meta property="og:site_name" content="{get_credit()}\n{post_date}\n{reaction_str}{image_counter}"/>
-            <meta property="og:url" content="{quote(post.url)}"/>
-            {image_meta_tags}
-            <link rel="canonical" href="{quote(post.url)}"/>
-            <meta http-equiv="refresh" content="0;url={quote(post.url)}"/>
-            <meta name="twitter:card" content="summary_large_image"/>
-            <meta name="theme-color" content="#0866ff"/>
-        </head>
-        </html>"""
+            <html lang="">
+                <head>
+                    <title>{get_credit()}</title>
+                    <meta charset="UTF-8"/>
+                    <meta property="og:title" content="{escape(post.author_name)}"/>
+                    <meta property="og:description" content="{escape(post.text[:1024])}"/>
+                    <meta property="og:site_name" content="{get_credit()}\n{post_date}\n{reaction_str}{image_counter}"/>
+                    <meta property="og:url" content="{quote(post.url)}"/>
+                    {image_meta_tags}
+                    <link rel="canonical" href="{quote(post.url)}"/>
+                    <meta http-equiv="refresh" content="0;url={quote(post.url)}"/>
+                    <meta name="twitter:card" content="summary_large_image"/>
+                    <meta name="theme-color" content="#0866ff"/>
+                </head>
+            </html>"""
     )
 
 
 def format_redirect_page(url: str) -> str:
     return Utils.prettify(
         f"""<!DOCTYPE HTML>
-<html lang="en-US">
-    <head>
-        <meta charset="UTF-8">
-        <meta http-equiv="refresh" content="0; url={quote(url)}">
-        <script type="text/javascript">
-            window.location.href = "{escape(url)}"
-        </script>
-        <title>redirecting...</title>
-    </head>
-    <body>
-    </body>
-</html>"""
+            <html lang="en-US">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta http-equiv="refresh" content="0; url={quote(url)}">
+                    <script type="text/javascript">
+                        window.location.href = "{escape(url)}"
+                    </script>
+                    <title>redirecting...</title>
+                </head>
+                <body>
+                </body>
+            </html>"""
     )
 
 

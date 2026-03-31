@@ -1,15 +1,9 @@
-import {
-  Collection,
-  Colors,
-  EmbedBuilder,
-  Message,
-  TextChannel,
-  WebhookClient,
-} from "discord.js";
+import { Collection, Colors, Message, WebhookClient } from "discord.js";
 import Handler from "./Handler.js";
 import fs from "fs";
 import { pipeline } from "stream/promises";
 import { configDotenv } from "dotenv";
+import * as cheerio from "cheerio";
 
 configDotenv();
 const { PYTHON_API } = process.env;
@@ -36,36 +30,23 @@ async function linkConvert(message) {
   return url.replace("https://www.facebook.com", PYTHON_API);
 }
 
-function extractVideoLink(html) {
-  const match = html.match(/<meta property="og:video:secure_url" content="([^"]+)"/);
-  return match ? match[1] : null;
-}
-
-function extractImageLink(html) {
-  const match = html.match(/<meta property="og:image" content="([^"]+)"/);
-  return match ? match[1] : null;
-}
-
-function extractPostDescription(html) {
-  const match = html.match(/<meta property="og:description" content="([^"]+)"/);
-  return match ? match[1] : null;
-}
-
-function extractPostTitle(html) {
-  const match = html.match(/<meta property="og:title" content="([^"]+)"/);
-  return match ? match[1] : null;
-}
-
 function trimEmbed(text, max = 4096) {
   if (text.length <= max) return text;
   return text.slice(0, max - 3) + "...";
 }
 
-function extractReelId(html) {
-  const match = html.match(
-    /<meta property="og:url" content="https:\/\/www\.facebook\.com\/reel\/(\d+)"/
-  );
-  return match ? match[1] : null;
+function parsePost(html) {
+  const $ = cheerio.load(html);
+
+  const get = (name) => $(`meta[property="${name}"]`).attr("content") ?? null;
+
+  return {
+    reelId: get("og:url")?.match(/reel\/(\d+)/)?.[1] ?? null,
+    videoLink: get("og:video:secure_url"),
+    imageLink: get("og:image"),
+    title: get("og:title"),
+    description: get("og:description"),
+  };
 }
 
 async function downloadVideo(url, path = "video.mp4") {
@@ -163,20 +144,16 @@ export default class AutoReplyHandler extends Handler {
     try {
       if (!message.inGuild() || message.author.bot) return;
 
-      const linkConverted = await linkConvert(message);
+      const convertedLink = await linkConvert(message);
+      const facebookLink = findFBUrl(message.content);
+      if (!convertedLink) return;
 
-      if (!linkConverted) return;
+      const response = await fetch(convertedLink);
 
-      const text = await (await fetch(linkConverted)).text();
-
-      const videoLink = extractVideoLink(text);
-      const videoReelId = extractReelId(text);
-      const imageLink = extractImageLink(text);
-      const postDescription = extractPostDescription(text);
-      const postTitle = extractPostTitle(text);
-
+      if (!response.ok) return;
+      const html = await response.text();
+      const postData = parsePost(html);
       const webhookClient = await this.createWebhook(message.channel);
-
       const reference = message.reference;
 
       let msg;
@@ -186,48 +163,59 @@ export default class AutoReplyHandler extends Handler {
         referenceMessage = await message.channel.messages.fetch(reference.messageId);
       }
 
-      if (videoLink && videoReelId) {
-        if (cache[videoReelId]) {
+      if (postData.videoLink) {
+        if (cache[postData.videoReelId]) {
           await webhookClient.send({
-            content: wrapLinks(message.content) + `\n${cache[videoReelId]}`,
+            content: wrapLinks(message.content) + `\n${cache[postData.videoReelId]}`,
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
           });
           return;
         }
 
-        const path = await downloadVideo(videoLink, `${videoReelId}.mp4`);
+        const path = await downloadVideo(postData.videoLink, `${postData.videoReelId}.mp4`);
 
         if (!path) return;
 
         msg = await webhookClient.send({
           content:
             wrapLinks(message.content) +
-            (referenceMessage ? `\n*Replied to ${message.url}*` : "") +
-            "\n> *Toki Bot - Powered by **Potarozz***",
+            (referenceMessage ? `\n*Replied to ${message.url}*` : ""),
           username: message.author.displayName,
           avatarURL: message.author.avatarURL(),
           files: [path],
+          embeds: [
+            {
+              description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
+              color: Colors.Blurple,
+              footer: { text: `UID: ${message.author.id}` },
+              timestamp: new Date(),
+            },
+          ],
         });
 
         if (message.deletable) await message.delete();
 
-        cache[videoReelId] = msg.attachments.at(0).proxy_url;
+        cache[postData.videoReelId] = msg.attachments.at(0).proxy_url;
 
         if (fs.readFileSync(path));
         fs.unlinkSync(path);
-      } else if (imageLink) {
+      } else if (postData.imageLink) {
+        const postEmbedDescription = `\n> **[${postData.title}](${wrapLinks(
+          facebookLink
+        )})**\n> ${postData.description}`;
+
         await webhookClient.send({
           content:
             wrapLinks(message.content) +
-            (referenceMessage ? `\n*Replied to ${message.url}*` : ""),
+            postEmbedDescription +
+            (referenceMessage ? `\n> *Replied to ${message.url}*` : ""),
+          files: [postData.imageLink],
           embeds: [
             {
-              title: postTitle,
-              description: trimEmbed(postDescription),
-              image: { url: imageLink },
+              description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
               color: Colors.Blurple,
-              footer: { text: `Toki Bot - Powered by Potarozz` },
+              footer: { text: `UID: ${message.author.id}` },
               timestamp: new Date(),
             },
           ],
