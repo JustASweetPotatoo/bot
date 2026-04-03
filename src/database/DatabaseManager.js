@@ -30,6 +30,14 @@ export default class DatabaseManager {
         PRIMARY KEY (id)
       );
     `);
+
+    await this.executeQuery(`
+        CREATE TABLE IF NOT EXISTS join_sessions (
+          id VARCHAR(64) NOT NULL,
+          join_timestamp VARCHAR(64),
+          PRIMARY KEY (id)
+        );
+      `);
   }
 
   async executeQuery(query, values) {

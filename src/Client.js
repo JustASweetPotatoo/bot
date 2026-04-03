@@ -5,10 +5,12 @@ import DatabaseManager from "./database/DatabaseManager.js";
 import LevelHandler from "./modules/LevelHandler.js";
 import AutoReplyHandler from "./modules/AutoReplyHandler.js";
 import UserService from "./database/UserService.js";
+import JoinSessionService from "./database/JoinSessionService.js";
 import Logger from "./modules/Logger.js";
 import NoichuHandler from "./modules/NoituHandler.js";
 import NSFWHandler from "./modules/NSFWHandler.js";
 import PinMessageHandler from "./modules/PinMessagehandler.js";
+import UserJoinHandler from "./modules/UserJoinHandler.js";
 
 class MossClient extends Client {
   __systemPath = fileURLToPath(import.meta.url)
@@ -43,7 +45,9 @@ class MossClient extends Client {
     this.logger = new Logger(this);
 
     this.userService = new UserService(this);
+    this.joinSessionService = new JoinSessionService(this);
 
+    this.userJoinHandler = new UserJoinHandler({ client: this });
     this.prefixCommandHandler = new PrefixCommandHandler({ client: this });
     this.levelHandler = new LevelHandler({ client: this });
     this.autoReplyHandler = new AutoReplyHandler({ client: this });
@@ -62,6 +66,27 @@ class MossClient extends Client {
         }
       } catch (error) {
         this.logger.writeLog(error);
+      }
+    });
+    
+    this.on(Events.GuildMemberAdd, async (member) => {
+      try {
+        await this.userJoinHandler.onMemberAdd(member);
+      } catch (error) {
+        const replyMessage = await message.reply({
+          embeds: [
+            new EmbedBuilder({
+              title: "Error on executing event messageCreate !",
+              color: Colors.Red,
+            }),
+          ],
+        });
+
+        this.logger.writeLog(error);
+
+        setTimeout(() => {
+          if (replyMessage.deletable) replyMessage.delete();
+        }, 5000);
       }
     });
 

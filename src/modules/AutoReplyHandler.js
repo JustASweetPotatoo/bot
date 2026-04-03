@@ -1,4 +1,11 @@
-import { Collection, Colors, Message, WebhookClient } from "discord.js";
+import {
+  AttachmentBuilder,
+  Collection,
+  Colors,
+  Message,
+  TextChannel,
+  WebhookClient,
+} from "discord.js";
 import Handler from "./Handler.js";
 import fs from "fs";
 import { pipeline } from "stream/promises";
@@ -177,28 +184,31 @@ export default class AutoReplyHandler extends Handler {
           return;
         }
 
-        const path = await downloadVideo(
-          postData.videoLink,
-          `${postData.reelId}.mp4`
-        );
+        const path = await downloadVideo(postData.videoLink, `${postData.reelId}.mp4`);
         const videoStats = fs.statSync(path);
 
         if (!path) return;
 
         if (videoStats.size >= 10 * 1024 * 1024) {
-          await message.reply({
-            content: `File size too large, use facebed API instead!\n${facebedLinkConvert(
-              facebookLink
-            )}`,
-          });
-        } else {
-          msg = await webhookClient.send({
+          const messagePayload = {
             content:
-              wrapLinks(message.content) +
-              (referenceMessage ? `\n*Replied to ${message.url}*` : ""),
+              `${wrapLinks(message.content)}\n> -# ${facebedLinkConvert(facebookLink)}` +
+              (referenceMessage
+                ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.author.displayName}](<${referenceMessage.url}>)`
+                : ""),
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
-            files: videoStats.size < 10 * 1024 * 1024 ? [path] : [],
+          };
+
+          await webhookClient.send(messagePayload);
+        } else {
+          const messagePayload = {
+            content:
+              wrapLinks(message.content) +
+              (referenceMessage ? `-# ↪ [Reply to ↗](<${referenceMessage.url}>)` : ""),
+            username: message.author.displayName,
+            avatarURL: message.author.avatarURL(),
+            files: videoStats.size < 50 * 1024 * 1024 ? [path] : [],
             embeds: [
               {
                 description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
@@ -207,7 +217,9 @@ export default class AutoReplyHandler extends Handler {
                 timestamp: new Date(),
               },
             ],
-          });
+          };
+
+          msg = await webhookClient.send(messagePayload);
 
           cache[postData.reelId] = msg.attachments.at(0).proxy_url;
           if (message.deletable) await message.delete();
