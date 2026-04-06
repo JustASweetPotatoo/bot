@@ -2,8 +2,10 @@ import {
   AttachmentBuilder,
   Collection,
   Colors,
+  ForumChannel,
   Message,
   TextChannel,
+  ThreadChannel,
   WebhookClient,
 } from "discord.js";
 import Handler from "./Handler.js";
@@ -161,10 +163,20 @@ export default class AutoReplyHandler extends Handler {
 
       const response = await fetch(convertedLink);
 
+      const parentChannel = message.channel.parent;
+      let webhookClient;
+
+      if (parentChannel instanceof ForumChannel) {
+        webhookClient = await this.createWebhook(parentChannel);
+      } else if (message.channel instanceof ThreadChannel) {
+        webhookClient = await this.createWebhook(parentChannel);
+      } else {
+        webhookClient = await this.createWebhook(message.channel);
+      }
+
       if (!response.ok) return;
       const html = await response.text();
       const postData = parsePost(html);
-      const webhookClient = await this.createWebhook(message.channel);
       const reference = message.reference;
 
       let msg;
