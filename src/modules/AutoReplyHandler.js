@@ -212,16 +212,23 @@ export default class AutoReplyHandler extends Handler {
             avatarURL: message.author.avatarURL(),
           };
 
-          await webhookClient.send(messagePayload);
+          if (parentChannel instanceof ForumChannel) {
+            msg = await webhookClient.send({
+              ...messagePayload,
+              threadId: message.channel.id,
+            });
+          } else {
+            msg = await webhookClient.send(messagePayload);
+          }
         } else {
           const messagePayload = {
             content:
               wrapLinks(message.content) +
-              (referenceMessage ? `-# ↪ [Reply to ↗](<${referenceMessage.url}>)` : ""),
+              (referenceMessage ? `\n> -# ↪ [Reply to ↗](<${referenceMessage.url}>)` : ""),
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
             files: videoStats.size < 50 * 1024 * 1024 ? [path] : [],
-            embeds: [
+            embeds: [ 
               {
                 description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
                 color: Colors.Blurple,

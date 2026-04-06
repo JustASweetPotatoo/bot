@@ -19,17 +19,19 @@ export default class Logger {
    * @param {string | Error} content
    */
   writeLog(content) {
-    if (!this.logChannel) {
-      console.error("Log channel not detected, print to console !");
-      console.warn(content);
-      return;
+    try {
+      if (!this.logChannel) {
+        console.error("Log channel not detected, print to console !");
+        console.warn(content);
+        return;
+      }
+      if (content instanceof Error) {
+        this.logChannel.send(`\`\`\`diff\n- ${content.stack}\`\`\``);
+      } else {
+        this.logChannel.send(`\`\`\`${content}\`\`\``);
+      }
+    } catch (error) {
+      console.log(error + "\n" + content);
     }
-    if (content instanceof Error) {
-      this.logChannel.send(`\`\`\`diff\n- ${content.stack}\`\`\``);
-    } else {
-      this.logChannel.send(`\`\`\`${content}\`\`\``);
-    }
-
-    console.log(content);
   }
 }
