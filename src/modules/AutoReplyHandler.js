@@ -231,7 +231,14 @@ export default class AutoReplyHandler extends Handler {
             ],
           };
 
-          msg = await webhookClient.send(messagePayload);
+          if (parentChannel instanceof ForumChannel) {
+            msg = await webhookClient.send({
+              ...messagePayload,
+              threadId: message.channel.id,
+            });
+          } else {
+            msg = await webhookClient.send(messagePayload);
+          }
 
           cache[postData.reelId] = msg.attachments.at(0).proxy_url;
           if (message.deletable) await message.delete();
