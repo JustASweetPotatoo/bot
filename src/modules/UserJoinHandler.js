@@ -41,12 +41,16 @@ export default class UserJoinHandler extends Handler {
         for (const member of memberKickList) {
           try {
             if (member instanceof GuildMember) {
-              await member.kick();
               await member.send({
                 content:
                   "You have been kicked from Thiên Hà Của Sứa with reason: Don't have role ***Neuron*** after join server 5 minutes",
               });
             }
+
+            setTimeout(
+              () => member.kick().catch((err) => this.client.logger.writeLog(err)),
+              5000
+            );
           } catch (error) {
             this.client.logger.writeLog(error);
           }
