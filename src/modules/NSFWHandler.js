@@ -7,6 +7,7 @@ import {
   GuildMember,
   Message,
   PermissionFlagsBits,
+  Colors
 } from "discord.js";
 import Handler from "./Handler.js";
 import { generateUUID } from "../utils/UUID.js";
@@ -185,7 +186,7 @@ export default class NSFWVerifyHandler extends Handler {
             )
             .setColor("Green"),
         ],
-      });
+      }).catch(err => this.client.logger.writeLog(err));
 
       await interaction.message.edit({
         embeds: [embed],
@@ -236,6 +237,18 @@ export default class NSFWVerifyHandler extends Handler {
       });
 
       await interaction.reply({ content: "Operation completed!", ephemeral: true });
+
+      
+      await member.send({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("Access Granted!")
+            .setDescription(
+              "Your request has been rejected with reason: \"No verify infomation\"!"
+            )
+            .setColor(Colors.Red),
+        ],
+      });
     }
 
     if (interaction.customId.startsWith("delete-request-")) {
