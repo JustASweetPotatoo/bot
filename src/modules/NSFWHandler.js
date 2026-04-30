@@ -203,6 +203,7 @@ export default class NSFWVerifyHandler extends Handler {
     if (interaction.customId.startsWith("deny-request-")) {
       const requestId = interaction.customId.split("deny-request-")[1];
       let request = this.requestList.find((request) => request.id == requestId);
+      const member = await interaction.guild.members.fetch(request.userId);
 
       if (!request) {
         await interaction.reply({ content: "Request not found!", ephemeral: true });
@@ -238,11 +239,10 @@ export default class NSFWVerifyHandler extends Handler {
 
       await interaction.reply({ content: "Operation completed!", ephemeral: true });
 
-      
       await member.send({
         embeds: [
           new EmbedBuilder()
-            .setTitle("Access Granted!")
+            .setTitle("Access Denied!")
             .setDescription(
               "Your request has been rejected with reason: \"No verify infomation\"!"
             )
