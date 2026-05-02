@@ -49,8 +49,8 @@ export default class UserJoinHandler extends Handler {
         }
       }
     } catch (error) {
-      if (this.client.logger)
-        this.client.logger.writeLog(error);
+      if (this.logger)
+        this.logger.writeLog(error);
       else
         console.log(error);
     }

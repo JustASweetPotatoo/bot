@@ -8,6 +8,7 @@ export default class Handler {
   constructor(options) {
     this.name = options.name;
     this.client = options.client;
+    this.logger = this.client.logger;
   }
 
   /**
