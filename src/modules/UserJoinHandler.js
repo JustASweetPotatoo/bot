@@ -64,7 +64,9 @@ export default class UserJoinHandler extends Handler {
         join_timestamp: toString(member.joinedTimestamp),
       });
     } catch (error) {
-      this.client.logger.writeLog(error);
+
+      if (this.client.logger)
+        this.client.logger.writeLog(error);
     }
   }
 }
