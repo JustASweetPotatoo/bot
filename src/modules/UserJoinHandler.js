@@ -13,7 +13,9 @@ export default class UserJoinHandler extends Handler {
     this.guild = this.client.guilds.cache.get("811939594882777128");
     this.kickTime = 1 * 60 * 60 * 1000;
 
-    setInterval(this.systemInterval, 5 * 60 * 1000);
+    this.intervalTimer = 1000 * 5;
+
+    setInterval(this.systemInterval.bind(this), this.intervalTimer);
   }
 
   async systemInterval() {
