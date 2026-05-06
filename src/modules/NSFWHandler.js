@@ -237,7 +237,8 @@ export default class NSFWVerifyHandler extends Handler {
         components: [actionRow],
       });
 
-      await interaction.reply({ content: "Operation completed!", ephemeral: true });
+      interaction.isRepliable() ?
+        await interaction.reply({ content: "Operation completed!", ephemeral: true }) : await interaction.channel.send({ content: "Operation completed!" });
 
       await member.send({
         embeds: [

@@ -154,7 +154,9 @@ export default class NoichuHandler extends Handler {
       }
 
       try {
-        if (state && !dictionary[path[0]][message.content]) {
+        const startWordlist = dictionary[path.at(0) ?? ""];
+
+        if (state && (!startWordlist || !startWordlist[message.content])) {
           replyMessageContent = `Từ ${message.content} không có trong từ điển của bot`;
           state = false;
         }
