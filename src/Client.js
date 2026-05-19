@@ -94,12 +94,24 @@ class MossClient extends Client {
       if (message.author.bot) return;
 
       try {
-        this.prefixCommandHandler.onMessage(message);
-        this.levelHandler.onMessage(message);
-        this.autoReplyHandler.onMessage(message);
-        this.noichuHandler.onMessage(message);
-        this.NSFWHandler.onMessage(message);
-        this.pinMessageHandler.onMessage(message);
+        this.prefixCommandHandler.onMessage(message).catch(error => {
+          this.logger.writeLog(error);
+        });
+        this.levelHandler.onMessage(message).catch(error => {
+          this.logger.writeLog(error);
+        });
+        this.autoReplyHandler.onMessage(message).catch(error => {
+          this.logger.writeLog(error);
+        });
+        this.noichuHandler.onMessage(message).catch(error => {
+          this.logger.writeLog(error);
+        });
+        this.NSFWHandler.onMessage(message).catch(error => {
+          this.logger.writeLog(error);
+        });
+        this.pinMessageHandler.onMessage(message).catch(error => {
+          this.logger.writeLog(error);
+        });
       } catch (error) {
         const replyMessage = await message.reply({
           embeds: [
