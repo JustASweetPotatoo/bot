@@ -163,15 +163,18 @@ export default class AutoReplyHandler extends Handler {
 
       const response = await fetch(convertedLink);
 
-      const parentChannel = message.channel.parent;
       let webhookClient;
 
-      if (parentChannel instanceof ForumChannel) {
-        webhookClient = await this.createWebhook(parentChannel);
-      } else if (message.channel instanceof ThreadChannel) {
-        webhookClient = await this.createWebhook(parentChannel);
-      } else {
-        webhookClient = await this.createWebhook(message.channel);
+      if (message.channel instanceof ThreadChannel) {
+        const parentChannel = message.channel.parent;
+
+        if (parentChannel instanceof ForumChannel) {
+          webhookClient = await this.createWebhook(parentChannel);
+        } else if (message.channel instanceof ThreadChannel) {
+          webhookClient = await this.createWebhook(parentChannel);
+        } else {
+          webhookClient = await this.createWebhook(message.channel);
+        }
       }
 
       if (!response.ok) return;

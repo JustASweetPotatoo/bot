@@ -54,7 +54,7 @@ export default class UserService {
 
   async getAllOrderByXp() {
     return await this.connection.executeQuery(
-      "ECT * FROM users ORDER BY xp DESC LIMIT 10;"
+      "SELECT * FROM users ORDER BY xp DESC LIMIT 10;"
     );
   }
 
