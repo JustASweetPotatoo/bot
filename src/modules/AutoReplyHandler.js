@@ -150,6 +150,35 @@ export default class AutoReplyHandler extends Handler {
   }
 
   /**
+   * 
+   * @param {Message<true>} message
+   * @returns {undefined | { reelId: string | undefined, videoLink: string | undefined, imageLink: string | undefined, title: string | undefined, description: string | undefined}} 
+   */
+  async getFacebookMedia(message) {
+    const extractedLinks = message.content.match(/https?:\/\/[^\s]+/g);
+    if (!extractedLinks) return undefined;
+    const facebookLinks = extractedLinks.filter((url) => url.startsWith("https://www.facebook.com"));
+    let firstLink = facebookLinks.at(0)
+    if (firstLink) return undefined;
+    firstLink = firstLink.replace("https://www.facebook.com", PYTHON_API);
+
+    const response = await fetch(firstLink);
+
+    if (!response.ok) return undefined;
+
+    const htmlResponseBody = await response.text();
+    const $ = cheerio.load(html);
+    const cheerioGet = (name) => $(`meta[property="${name}"]`).attr("content") ?? null;
+    const postMetaData = {
+      reelId: cheerioGet("og:url")?.match(/reel\/(\d+)/)?.[1] ?? null,
+      videoLink: cheerioGet("og:video:secure_url"),
+      imageLink: cheerioGet("og:image"),
+      title: cheerioGet("og:title"),
+      description: cheerioGet("og:description"),
+    };
+  }
+
+  /**
    *
    * @param {Message<true>} message
    */
@@ -164,10 +193,9 @@ export default class AutoReplyHandler extends Handler {
       const response = await fetch(convertedLink);
 
       let webhookClient;
+      const parentChannel = message.channel.parent;
 
       if (message.channel instanceof ThreadChannel) {
-        const parentChannel = message.channel.parent;
-
         if (parentChannel instanceof ForumChannel) {
           webhookClient = await this.createWebhook(parentChannel);
         } else if (message.channel instanceof ThreadChannel) {
@@ -209,7 +237,7 @@ export default class AutoReplyHandler extends Handler {
             content:
               `${wrapLinks(message.content)}\n> -# ${facebedLinkConvert(facebookLink)}` +
               (referenceMessage
-                ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.author.displayName}](<${referenceMessage.url}>)`
+                ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.member.displayName}](<${referenceMessage.url}>)`
                 : ""),
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
@@ -227,11 +255,11 @@ export default class AutoReplyHandler extends Handler {
           const messagePayload = {
             content:
               wrapLinks(message.content) +
-              (referenceMessage ? `\n> -# ↪ [Reply to ↗](<${referenceMessage.url}>)` : ""),
+              (referenceMessage ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.member.displayName}](<${referenceMessage.url}>)` : ""),
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
             files: videoStats.size < 50 * 1024 * 1024 ? [path] : [],
-            embeds: [ 
+            embeds: [
               {
                 description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
                 color: Colors.Blurple,
@@ -265,7 +293,7 @@ export default class AutoReplyHandler extends Handler {
           content:
             wrapLinks(message.content) +
             postEmbedDescription +
-            (referenceMessage ? `\n> *Replied to ${message.url}*` : ""),
+            (referenceMessage ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.member.displayName}](<${referenceMessage.url}>)` : ""),
           files: [postData.imageLink],
           embeds: [
             {
