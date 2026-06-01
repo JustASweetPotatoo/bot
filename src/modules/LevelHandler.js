@@ -27,7 +27,7 @@ function calcExp(messageContent) {
 
 class LevelHandler extends Handler {
   checkpointList = [
-    { roleId: "1178724878615056474", from: 80, to: 1000 },
+    { roleId: "1178724878615056474", from: 80, to: 999999 },
     { roleId: "1178699000795373690", from: 50, to: 79 },
     { roleId: "1178698944117747864", from: 30, to: 49 },
     { roleId: "1178698847766204528", from: 10, to: 29 },

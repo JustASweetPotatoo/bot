@@ -254,8 +254,8 @@ export default class AutoReplyHandler extends Handler {
             content:
               wrapLinks(message.content) +
               (referenceMessage ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.member.displayName}](<${referenceMessage.url}>)` : ""),
-            username: message.author.displayName,
-            avatarURL: message.author.avatarURL(),
+            username: message.member.nickname,
+            avatarURL: message.member.displayAvatarURL(),
             files: videoStats.size < 50 * 1024 * 1024 ? [path] : [],
             embeds: [
               {
