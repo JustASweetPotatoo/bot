@@ -159,8 +159,12 @@ class MossClient extends Client {
       const kickMember = await interaction.guild.members.fetch(id);
       if (!kickMember) return;
       if (kickMember.kickable) await kickMember.kick("Not verified !");
+      await interaction.editReply(
+        "Operation complete, kicked member: " + `<@${kickMember.id}>`,
+      );
     } else if (command === "deletemsg") {
       if (interaction.message.deletable) await interaction.message.delete();
+      await interaction.editReply("Operation complete!");
     }
   }
 }

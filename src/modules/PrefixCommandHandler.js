@@ -676,6 +676,16 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async scanMember(message, args) {
+    if (
+      !(
+        message.member.permissions.has("ModerateMembers") ||
+        message.member.permissions.has("Administrator")
+      )
+    ) {
+      await message.reply("You don't have permission to use this command !");
+      return;
+    }
+
     let members = await message.guild.members.fetch();
     const dt = new Date("2026-01-01");
 
