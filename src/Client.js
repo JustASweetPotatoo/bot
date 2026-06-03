@@ -1,4 +1,12 @@
-import { Client, Colors, EmbedBuilder, Events, GatewayIntentBits } from "discord.js";
+import {
+  ButtonInteraction,
+  Client,
+  Colors,
+  EmbedBuilder,
+  Events,
+  GatewayIntentBits,
+  MessageFlags,
+} from "discord.js";
 import { fileURLToPath } from "url";
 import PrefixCommandHandler from "./modules/PrefixCommandHandler.js";
 import DatabaseManager from "./database/DatabaseManager.js";
@@ -60,15 +68,16 @@ class MossClient extends Client {
     });
 
     this.on(Events.InteractionCreate, async (interaction) => {
-      try {
-        if (interaction.isButton()) {
-          await this.NSFWHandler.onButtonInteractionCreate(interaction);
-        }
-      } catch (error) {
-        this.logger.writeLog(error);
+      if (interaction.isButton()) {
+        this.NSFWHandler.onButtonInteractionCreate(interaction).catch((error) =>
+          this.logger.writeLog(error),
+        );
+        this.scanMemberButtonInteraction(interaction).catch((error) =>
+          this.logger.writeLog(error),
+        );
       }
     });
-    
+
     this.on(Events.GuildMemberAdd, async (member) => {
       try {
         await this.userJoinHandler.onMemberAdd(member);
@@ -130,6 +139,29 @@ class MossClient extends Client {
     }
 
     this.login(DISCORD_BOT_TOKEN);
+  }
+
+  /**
+   *
+   * @param {ButtonInteraction} interaction
+   */
+  async scanMemberButtonInteraction(interaction) {
+    if (!interaction.deferred)
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const args = interaction.customId.split("-");
+    const command = args[0];
+    const id = args[1];
+
+    if (!command || id) return;
+
+    if (command === "kick") {
+      const kickMember = await interaction.guild.members.fetch(id);
+      if (!kickMember) return;
+      if (kickMember.kickable) await kickMember.kick("Not verified !");
+    } else if (command === "deletemsg") {
+      if (interaction.message.deletable) await interaction.message.delete();
+    }
   }
 }
 

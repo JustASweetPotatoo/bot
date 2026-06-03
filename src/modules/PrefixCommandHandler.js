@@ -1,5 +1,8 @@
 import {
+  ActionRowBuilder,
   AttachmentBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   ChannelType,
   Collection,
   Colors,
@@ -71,6 +74,11 @@ export default class PrefixCommandHandler extends Handler {
       usage: "",
       function: this.createPinMessage,
     },
+    scan: {
+      name: "scan",
+      usage: "",
+      function: this.scanMember,
+    },
   };
 
   tutien = {
@@ -128,7 +136,7 @@ export default class PrefixCommandHandler extends Handler {
       sendTemporatyMessage(
         message,
         { content: "You don't have permission to use this command !" },
-        5000
+        5000,
       );
       return;
     }
@@ -154,11 +162,18 @@ export default class PrefixCommandHandler extends Handler {
       amount = parseInt(args[1]);
     }
 
-    let initCollection = await channel.messages.fetch({ before: message.id, limit: 100 });
+    let initCollection = await channel.messages.fetch({
+      before: message.id,
+      limit: 100,
+    });
     let firstMessage = initCollection.first();
 
     if (!firstMessage) {
-      await sendTemporatyMessage(message, { content: "No message to delete !" }, 5000);
+      await sendTemporatyMessage(
+        message,
+        { content: "No message to delete !" },
+        5000,
+      );
       return;
     }
 
@@ -220,7 +235,11 @@ export default class PrefixCommandHandler extends Handler {
       chunk.forEach((mesage) => channel.messages.delete(mesage));
     }
 
-    sendTemporatyMessage(message, { content: `Deleted ${messageCount} message !` }, 5000);
+    sendTemporatyMessage(
+      message,
+      { content: `Deleted ${messageCount} message !` },
+      5000,
+    );
 
     setTimeout(() => {
       if (message && message.deletable) message.delete();
@@ -245,9 +264,14 @@ export default class PrefixCommandHandler extends Handler {
           sendTemporatyMessage(
             message,
             {
-              embeds: [new EmbedBuilder({ title: "Bot Error !", color: Colors.Yellow })],
+              embeds: [
+                new EmbedBuilder({
+                  title: "Bot Error !",
+                  color: Colors.Yellow,
+                }),
+              ],
             },
-            5000
+            5000,
           );
 
           this.client.logger.writeLog(error);
@@ -258,10 +282,13 @@ export default class PrefixCommandHandler extends Handler {
           message,
           {
             embeds: [
-              new EmbedBuilder({ title: "Command Not Found !", color: Colors.Yellow }),
+              new EmbedBuilder({
+                title: "Command Not Found !",
+                color: Colors.Yellow,
+              }),
             ],
           },
-          5000
+          5000,
         );
       }
     }
@@ -273,7 +300,8 @@ export default class PrefixCommandHandler extends Handler {
    */
   async getListCommands(message) {
     await message.reply({
-      content: "Available commands:\n- " + Object.keys(this.commands).join("\n- "),
+      content:
+        "Available commands:\n- " + Object.keys(this.commands).join("\n- "),
     });
   }
 
@@ -283,7 +311,7 @@ export default class PrefixCommandHandler extends Handler {
    */
   async ping(message) {
     await message.reply(
-      "Pong! Response time: " + (Date.now() - message.createdTimestamp) + "ms"
+      "Pong! Response time: " + (Date.now() - message.createdTimestamp) + "ms",
     );
   }
 
@@ -337,14 +365,19 @@ export default class PrefixCommandHandler extends Handler {
         if (level >= 999) return { main: t.vinhhangcanh };
         if (level >= 780) return { main: t.chuate };
 
-        if (level >= 695) return { main: t.thienco.name, child: t.thienco.child.hauky };
-        if (level >= 620) return { main: t.thienco.name, child: t.thienco.child.trungky };
-        if (level >= 545) return { main: t.thienco.name, child: t.thienco.child.soky };
+        if (level >= 695)
+          return { main: t.thienco.name, child: t.thienco.child.hauky };
+        if (level >= 620)
+          return { main: t.thienco.name, child: t.thienco.child.trungky };
+        if (level >= 545)
+          return { main: t.thienco.name, child: t.thienco.child.soky };
 
-        if (level >= 470) return { main: t.thienton.name, child: t.thienton.child.hauky };
+        if (level >= 470)
+          return { main: t.thienton.name, child: t.thienton.child.hauky };
         if (level >= 405)
           return { main: t.thienton.name, child: t.thienton.child.trungky };
-        if (level >= 340) return { main: t.thienton.name, child: t.thienton.child.soky };
+        if (level >= 340)
+          return { main: t.thienton.name, child: t.thienton.child.soky };
 
         if (level >= 275) return { main: t.banthan };
 
@@ -367,17 +400,20 @@ export default class PrefixCommandHandler extends Handler {
 
       const totalExpOfCurrentLevel =
         getTotalXpForLevel(res.level + 1) - getTotalXpForLevel(res.level);
-      const totalExpGainedOnCurrentLevel = res.xp - getTotalXpForLevel(res.level);
+      const totalExpGainedOnCurrentLevel =
+        res.xp - getTotalXpForLevel(res.level);
       const currentLevelProcessPercentage =
         totalExpGainedOnCurrentLevel / totalExpOfCurrentLevel;
       const green_square = ":green_square:";
       const white_large_square = ":white_large_square:";
-      const numberOfGreenSquare = Math.floor(currentLevelProcessPercentage * 10);
+      const numberOfGreenSquare = Math.floor(
+        currentLevelProcessPercentage * 10,
+      );
       const progressBar =
         res.level >= 999
           ? ":red_square:".repeat(10)
           : `${green_square.repeat(numberOfGreenSquare)}${white_large_square.repeat(
-              10 - numberOfGreenSquare
+              10 - numberOfGreenSquare,
             )}`;
 
       const firstCol = [
@@ -395,14 +431,16 @@ export default class PrefixCommandHandler extends Handler {
           res.level
         })*`,
         `${progressBar} *(${
-          res.level >= 999 ? "MAX" : Math.floor(currentLevelProcessPercentage * 100) + "%"
+          res.level >= 999
+            ? "MAX"
+            : Math.floor(currentLevelProcessPercentage * 100) + "%"
         })*`,
         `*${res.message_count} 💬 sent*`,
         `${
           res.level >= 999
             ? "MAX"
             : `*${Math.floor(
-                (totalExpOfCurrentLevel - totalExpGainedOnCurrentLevel) / 30
+                (totalExpOfCurrentLevel - totalExpGainedOnCurrentLevel) / 30,
               )} messages*`
         }`,
         "",
@@ -421,7 +459,10 @@ export default class PrefixCommandHandler extends Handler {
         { name: "---", value: fieldData.secondCol.join("\n"), inline: true },
       ],
       color: Colors.Blurple,
-      author: { name: mentionedUser.username, iconURL: mentionedUser.avatarURL() },
+      author: {
+        name: mentionedUser.username,
+        iconURL: mentionedUser.avatarURL(),
+      },
     }).setTimestamp();
 
     // await message.reply({ embeds: [embed1] });
@@ -460,11 +501,11 @@ export default class PrefixCommandHandler extends Handler {
         if (err) {
           console.log(err);
         }
-      }
+      },
     );
 
     const messageAuthorData = await this.client.userService.getRankOrderByXp(
-      message.author.id
+      message.author.id,
     );
 
     const convertedUserMessages = [];
@@ -474,23 +515,33 @@ export default class PrefixCommandHandler extends Handler {
 
     allUsers.forEach((userData, index) => {
       convertedUserMessages.push(
-        `> **#${index + 1}${index < 10 ? "" : " "}** <@${userData.id}>`
+        `> **#${index + 1}${index < 10 ? "" : " "}** <@${userData.id}>`,
       );
       convertedUserMessages2.push(`> \`${userData.level}\``);
       convertedUserMessages3.push(`> \`${userData.xp}\``);
     });
 
     const embedBuilder = new EmbedBuilder({
-      author: { name: "Bảng Xếp Hạng (only message)", iconURL: message.guild.iconURL() },
+      author: {
+        name: "Bảng Xếp Hạng (only message)",
+        iconURL: message.guild.iconURL(),
+      },
       title: `Top ${convertedUserMessages.length} Tin Nhắn`,
       description: ` ***Rank của bạn: #${messageAuthorData.rank}***`,
       timestamp: new Date(),
       fields: [
         { name: "User", value: convertedUserMessages.join("\n"), inline: true },
-        { name: "level", value: convertedUserMessages2.join("\n"), inline: true },
+        {
+          name: "level",
+          value: convertedUserMessages2.join("\n"),
+          inline: true,
+        },
         { name: "Xp", value: convertedUserMessages3.join("\n"), inline: true },
       ],
-      footer: { iconURL: message.author.avatarURL(), text: message.author.username },
+      footer: {
+        iconURL: message.author.avatarURL(),
+        text: message.author.username,
+      },
       color: Colors.Blurple,
     });
 
@@ -511,12 +562,12 @@ export default class PrefixCommandHandler extends Handler {
 
       for (const userData of allUsers) {
         convertedUserMessages.push(
-          `${userData.id}/${userData.xp}/${userData.level}/${userData.message_count}/${userData.achivement_id}`
+          `${userData.id}/${userData.xp}/${userData.level}/${userData.message_count}/${userData.achivement_id}`,
         );
       }
 
       const plainText = `databaseTimestamp:${Date.now()}\n${convertedUserMessages.join(
-        "\n"
+        "\n",
       )}`;
 
       if (channel && channel instanceof TextChannel) {
@@ -624,6 +675,43 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Message<true>} message
    * @param {Array<string>} args
    */
+  async scanMember(message, args) {
+    let members = await message.guild.members.fetch();
+    const dt = new Date("2026-01-01");
+
+    members = members.filter((member) => member.joinedTimestamp > dt.getTime());
+
+    const channel = await message.guild.channels.fetch("1438055867202277428");
+
+    if (!channel || !(channel instanceof TextChannel)) return;
+
+    const kickButton = new ButtonBuilder()
+      .setLabel("kick")
+      .setStyle(ButtonStyle.Danger);
+    const deleteButton = new ButtonBuilder()
+      .setLabel("cancel")
+      .setCustomId("deletemsg")
+      .setStyle(ButtonStyle.Primary);
+
+    for (const [id, member] of members) {
+      kickButton.setCustomId(`kick-${id}`);
+      const actionRow = new ActionRowBuilder().addComponents([
+        kickButton,
+        deleteButton,
+      ]);
+
+      await channel.send({
+        content: `User: ${member.user.globalName}/${member.id}`,
+        components: [actionRow],
+      });
+    }
+  }
+
+  /**
+   *
+   * @param {Message<true>} message
+   * @param {Array<string>} args
+   */
   async mute(message, args) {
     if (
       !(
@@ -652,22 +740,22 @@ export default class PrefixCommandHandler extends Handler {
 
     if (args[2].endsWith("s")) {
       message.channel.send(
-        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`
+        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`,
       );
       await userTarget.timeout(parseInt(args[2]) * 1000, reason);
     } else if (args[2].endsWith("m")) {
       message.channel.send(
-        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`
+        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`,
       );
       await userTarget.timeout(parseInt(args[2]) * 60 * 1000, reason);
     } else if (args[2].endsWith("h")) {
       message.channel.send(
-        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`
+        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`,
       );
       await userTarget.timeout(parseInt(args[2]) * 60 * 60 * 1000, reason);
     } else if (args[2].endsWith("d")) {
       message.channel.send(
-        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`
+        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`,
       );
       await userTarget.timeout(parseInt(args[2]) * 24 * 60 * 60 * 1000, reason);
     } else {
