@@ -701,7 +701,7 @@ export default class PrefixCommandHandler extends Handler {
       ]);
 
       await channel.send({
-        content: `User: ${member.user.globalName}/${member.id}`,
+        content: `User: ${member.user.globalName}/${member.id}: ${member.roles.cache.map((role) => role.name).join(" | ")}`,
         components: [actionRow],
       });
     }
