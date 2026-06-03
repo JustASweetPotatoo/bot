@@ -162,6 +162,7 @@ class MossClient extends Client {
       await interaction.editReply(
         "Operation complete, kicked member: " + `<@${kickMember.id}>`,
       );
+      if (interaction.message.deletable) await interaction.message.delete();
     } else if (command === "deletemsg") {
       if (interaction.message.deletable) await interaction.message.delete();
       await interaction.editReply("Operation complete!");
