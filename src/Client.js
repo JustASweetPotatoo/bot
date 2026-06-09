@@ -73,9 +73,9 @@ class MossClient extends Client {
         this.NSFWHandler.onButtonInteractionCreate(interaction).catch((error) =>
           this.logger.writeLog(error),
         );
-        this.scanMemberButtonInteraction(interaction).catch((error) =>
-          this.logger.writeLog(error),
-        );
+        // this.scanMemberButtonInteraction(interaction).catch((error) =>
+        //   this.logger.writeLog(error),
+        // );
       }
     });
 

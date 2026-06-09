@@ -74,11 +74,11 @@ export default class PrefixCommandHandler extends Handler {
       usage: "",
       function: this.createPinMessage,
     },
-    scan: {
-      name: "scan",
-      usage: "",
-      function: this.scanMember,
-    },
+    // scan: {
+    //   name: "scan",
+    //   usage: "",
+    //   function: this.scanMember,
+    // },
   };
 
   tutien = {
