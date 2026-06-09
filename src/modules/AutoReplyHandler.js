@@ -2,6 +2,7 @@ import {
   AttachmentBuilder,
   Collection,
   Colors,
+  EmbedBuilder,
   ForumChannel,
   Message,
   TextChannel,
@@ -25,7 +26,9 @@ const { PYTHON_API } = process.env;
 function findFBUrl(content) {
   const urls = content.match(/https?:\/\/[^\s]+/g);
   if (!urls) return undefined;
-  const fbUrls = urls.filter((url) => url.startsWith("https://www.facebook.com"));
+  const fbUrls = urls.filter((url) =>
+    url.startsWith("https://www.facebook.com"),
+  );
   return fbUrls.at(0);
 }
 
@@ -126,7 +129,7 @@ export default class AutoReplyHandler extends Handler {
 
     if (!webhookClient) {
       let wb = (await channel.fetchWebhooks()).find(
-        (wb) => wb.owner.id == this.client.user.id
+        (wb) => wb.owner.id == this.client.user.id,
       );
 
       if (!wb) {
@@ -142,7 +145,7 @@ export default class AutoReplyHandler extends Handler {
           channelId: channel.id,
           guildId: channel.guildId,
         },
-        webhookClient.url
+        webhookClient.url,
       );
 
       return webhookClient;
@@ -150,15 +153,17 @@ export default class AutoReplyHandler extends Handler {
   }
 
   /**
-   * 
+   *
    * @param {Message<true>} message
-   * @returns {undefined | { reelId: string | undefined, videoLink: string | undefined, imageLink: string | undefined, title: string | undefined, description: string | undefined}} 
+   * @returns {undefined | { reelId: string | undefined, videoLink: string | undefined, imageLink: string | undefined, title: string | undefined, description: string | undefined}}
    */
   async getFacebookMedia(message) {
     const extractedLinks = message.content.match(/https?:\/\/[^\s]+/g);
     if (!extractedLinks) return undefined;
-    const facebookLinks = extractedLinks.filter((url) => url.startsWith("https://www.facebook.com"));
-    let firstLink = facebookLinks.at(0)
+    const facebookLinks = extractedLinks.filter((url) =>
+      url.startsWith("https://www.facebook.com"),
+    );
+    let firstLink = facebookLinks.at(0);
     if (firstLink) return undefined;
     firstLink = firstLink.replace("https://www.facebook.com", PYTHON_API);
 
@@ -168,7 +173,8 @@ export default class AutoReplyHandler extends Handler {
 
     const htmlResponseBody = await response.text();
     const $ = cheerio.load(html);
-    const cheerioGet = (name) => $(`meta[property="${name}"]`).attr("content") ?? null;
+    const cheerioGet = (name) =>
+      $(`meta[property="${name}"]`).attr("content") ?? null;
     const postMetaData = {
       reelId: cheerioGet("og:url")?.match(/reel\/(\d+)/)?.[1] ?? null,
       videoLink: cheerioGet("og:video:secure_url"),
@@ -203,6 +209,15 @@ export default class AutoReplyHandler extends Handler {
         webhookClient = await this.createWebhook(message.channel);
       }
 
+      const embedPayload = [
+        {
+          description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
+          color: Colors.Blurple,
+          footer: { text: `UID: ${message.author.id}` },
+          timestamp: new Date(),
+        },
+      ];
+
       if (!response.ok) return;
       const html = await response.text();
       const postData = parsePost(html);
@@ -212,20 +227,26 @@ export default class AutoReplyHandler extends Handler {
       let referenceMessage;
 
       if (reference) {
-        referenceMessage = await message.channel.messages.fetch(reference.messageId);
+        referenceMessage = await message.channel.messages.fetch(
+          reference.messageId,
+        );
       }
 
       if (postData.videoLink) {
         if (cache[postData.reelId]) {
           await webhookClient.send({
             content: wrapLinks(message.content) + `\n${cache[postData.reelId]}`,
+            embeds: embedPayload,
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
           });
           return;
         }
 
-        const path = await downloadVideo(postData.videoLink, `${postData.reelId}.mp4`);
+        const path = await downloadVideo(
+          postData.videoLink,
+          `${postData.reelId}.mp4`,
+        );
         const videoStats = fs.statSync(path);
 
         if (!path) return;
@@ -237,6 +258,7 @@ export default class AutoReplyHandler extends Handler {
               (referenceMessage
                 ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.member.displayName}](<${referenceMessage.url}>)`
                 : ""),
+            embeds: embedPayload,
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
           };
@@ -250,31 +272,16 @@ export default class AutoReplyHandler extends Handler {
             msg = await webhookClient.send(messagePayload);
           }
         } else {
-          const messagePayload = {
-            content:
-              wrapLinks(message.content) +
-              (referenceMessage ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.member.displayName}](<${referenceMessage.url}>)` : ""),
-            username: message.member.nickname,
-            avatarURL: message.member.displayAvatarURL(),
-            files: videoStats.size < 50 * 1024 * 1024 ? [path] : [],
-            embeds: [
-              {
-                description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
-                color: Colors.Blurple,
-                footer: { text: `UID: ${message.author.id}` },
-                timestamp: new Date(),
-              },
-            ],
-          };
+          const embed = new EmbedBuilder()
+            .setTitle("This post is private or unavailable !")
+            .setDescription(
+              `[See posts, photos and more on Facebook](<${facebookLink}>)`,
+            )
+            .setColor(Colors.Yellow);
 
-          if (parentChannel instanceof ForumChannel) {
-            msg = await webhookClient.send({
-              ...messagePayload,
-              threadId: message.channel.id,
-            });
-          } else {
-            msg = await webhookClient.send(messagePayload);
-          }
+          embedPayload.push(embed);
+
+          await message.reply({ embeds: embedPayload });
 
           cache[postData.reelId] = msg.attachments.at(0).proxy_url;
           if (message.deletable) await message.delete();
@@ -284,23 +291,18 @@ export default class AutoReplyHandler extends Handler {
         fs.unlinkSync(path);
       } else if (postData.imageLink) {
         const postEmbedDescription = `\n> **[${postData.title}](${wrapLinks(
-          facebookLink
+          facebookLink,
         )})**\n> ${postData.description}`;
 
         await webhookClient.send({
           content:
             wrapLinks(message.content) +
             postEmbedDescription +
-            (referenceMessage ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.member.displayName}](<${referenceMessage.url}>)` : ""),
+            (referenceMessage
+              ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.member.displayName}](<${referenceMessage.url}>)`
+              : ""),
           files: [postData.imageLink],
-          embeds: [
-            {
-              description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
-              color: Colors.Blurple,
-              footer: { text: `UID: ${message.author.id}` },
-              timestamp: new Date(),
-            },
-          ],
+          embeds: embedPayload,
           username: message.author.displayName,
           avatarURL: message.author.avatarURL(),
         });
@@ -324,7 +326,7 @@ export default class AutoReplyHandler extends Handler {
       const autoReplyItem = this.autoReplyData.find((value) =>
         value.wildcard
           ? message.content.includes(value.match)
-          : message.content.startsWith(value.match)
+          : message.content.startsWith(value.match),
       );
 
       if (!autoReplyItem) return;
@@ -340,7 +342,8 @@ export default class AutoReplyHandler extends Handler {
           return;
         else mentionText = `<@${mentionedUser.id}> `;
 
-        sendText = index == 0 ? `${mentionText}${content.content}` : content.content;
+        sendText =
+          index == 0 ? `${mentionText}${content.content}` : content.content;
         content.replyMessage && message.reference && message.reference.messageId
           ? await message.reply(sendText)
           : await message.channel.send(sendText);
