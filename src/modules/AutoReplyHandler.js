@@ -251,7 +251,10 @@ export default class AutoReplyHandler extends Handler {
 
         if (!path) return;
 
-        if (videoStats.size >= 10 * 1024 * 1024) {
+        if (
+          videoStats.size >= 10 * 1024 * 1024 &&
+          videoStats.size < 500 * 1024 * 1024
+        ) {
           const messagePayload = {
             content:
               `${wrapLinks(message.content)}\n> -# ${facebedLinkConvert(facebookLink)}` +
@@ -278,11 +281,7 @@ export default class AutoReplyHandler extends Handler {
               `[See posts, photos and more on Facebook](<${facebookLink}>)`,
             )
             .setColor(Colors.Yellow);
-
-          embedPayload.push(embed);
-
-          await message.reply({ embeds: embedPayload });
-
+          await message.reply({ embeds: [embed, ...embedPayload] });
           cache[postData.reelId] = msg.attachments.at(0).proxy_url;
           if (message.deletable) await message.delete();
         }
@@ -299,7 +298,7 @@ export default class AutoReplyHandler extends Handler {
             wrapLinks(message.content) +
             postEmbedDescription +
             (referenceMessage
-              ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.member.displayName}](<${referenceMessage.url}>)`
+              ? `s\n> -# ↪ [Reply to ↗ ${referenceMesage.member.displayName}](<${referenceMessage.url}>)`
               : ""),
           files: [postData.imageLink],
           embeds: embedPayload,
