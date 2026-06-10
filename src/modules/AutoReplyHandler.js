@@ -204,6 +204,8 @@ export default class AutoReplyHandler extends Handler {
     );
     let firstUrl = fbUrls.at(0);
 
+    if (!firstUrl) return firstUrl;
+
     if (toAPI) return firstUrl.replace("https://www.facebook.com", PYTHON_API);
     return firstUrl.replace(
       "https://www.facebook.com",
