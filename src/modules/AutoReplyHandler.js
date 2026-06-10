@@ -7,6 +7,7 @@ import {
   Message,
   TextChannel,
   ThreadChannel,
+  VoiceChannel,
   WebhookClient,
 } from "discord.js";
 import Handler from "./Handler.js";
@@ -105,12 +106,7 @@ export default class AutoReplyHandler extends Handler {
       content: [
         {
           replyMessage: false,
-          content: "mẹ mày béo !",
-        },
-        {
-          replyMessage: false,
-          content:
-            "[capoo_sleep](https://cdn.discordapp.com/emojis/1277690970531561595.webp?size=48&name=capoo_sleep)",
+          content: "mẹ mày béo !\n# <:capoo_sleep:1277690970531561595>",
         },
       ],
     },
@@ -122,34 +118,26 @@ export default class AutoReplyHandler extends Handler {
    * @returns {Promise<WebhookClient>}
    */
   async createWebhook(channel) {
-    let webhookClient = this.webhookClients.get({
-      channelId: channel.id,
-      guildId: channel.guildId,
-    });
+    const cacheId = `${channel.id}/${channel.guild.id}`;
 
-    if (!webhookClient) {
-      let wb = (await channel.fetchWebhooks()).find(
-        (wb) => wb.owner.id == this.client.user.id,
-      );
+    let wb = (await channel.fetchWebhooks()).find(
+      (wb) => wb.owner.id == this.client.user.id,
+    );
 
-      if (!wb) {
-        wb = await channel.createWebhook({
-          name: this.client.user.displayName,
-        });
-      }
-
-      webhookClient = new WebhookClient({ url: wb.url });
-
-      this.webhookClients.set(
-        {
-          channelId: channel.id,
-          guildId: channel.guildId,
-        },
-        webhookClient.url,
-      );
-
-      return webhookClient;
+    if (!wb) {
+      wb = await channel.createWebhook({
+        name: this.client.user.displayName,
+      });
     }
+
+    webhookClient = new WebhookClient({ url: wb.url });
+
+    this.webhookClients.set(
+      cacheId,
+      webhookClient.url,
+    );
+
+    return webhookClient;
   }
 
   /**
@@ -186,54 +174,87 @@ export default class AutoReplyHandler extends Handler {
 
   /**
    *
+   * @param {TextChannel | VoiceChannel | ThreadChannel} channel
+   * @returns {WebhookClient}
+   */
+  async getWebhook(channel) {
+    const cacheId = `${channel.id}/${channel.guild.id}`;
+    let webhook = this.webhookClients.get(cacheId);
+
+    if (webhook) return webhook;
+
+    if (message.channel instanceof ThreadChannel) {
+      webhook = await this.createWebhook(channel.parent);
+    } else {
+      webhook = await this.createWebhook(channel);
+    }
+
+    this.webhookClients.set(cacheId, webhook);
+
+    return webhook;
+  }
+
+  /**
+   * @param {Message<true>} message
+   * @param {boolean} [toAPI=true]
+   * @returns {string | undefined}
+   */
+  lnk(message, toAPI = true) {
+    const urls = message.content.match(/https?:\/\/[^\s]+/g);
+    if (!urls) return undefined;
+    const fbUrls = urls.filter((url) =>
+      url.startsWith("https://www.facebook.com"),
+    );
+
+    const facebookUrl = urls.at(0);
+
+    if (toAPI) return url.replace("https://www.facebook.com", PYTHON_API);
+    return url.replace("https://www.facebook.com", "https://www.facebed.com");
+  }
+
+  /**
+   *
    * @param {Message<true>} message
    */
   async processFacebookUrl(message) {
     try {
       if (!message.inGuild() || message.author.bot) return;
+      const facebookUrl = this.lnk(message);
+      if (!facebookUrl) return;
 
-      const convertedLink = await linkConvert(message);
-      const facebookLink = findFBUrl(message.content);
-      if (!convertedLink) return;
+      const founderEmbed = {
+        description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
+        color: Colors.Blurple,
+        footer: { text: `UID: ${message.author.id}` },
+        timestamp: new Date(),
+      };
 
-      const response = await fetch(convertedLink);
+      const response = await fetch(facebookUrl);
 
-      let webhookClient;
-      const parentChannel = message.channel.parent;
-
-      if (parentChannel instanceof ForumChannel) {
-        webhookClient = await this.createWebhook(parentChannel);
-      } else if (message.channel instanceof ThreadChannel) {
-        webhookClient = await this.createWebhook(parentChannel);
-      } else {
-        webhookClient = await this.createWebhook(message.channel);
+      if (!response.ok) {
+        const warnEmbed = new EmbedBuilder()
+          .setTitle("This post is private or unavailable !")
+          .setDescription(
+            `[See posts, photos and more on Facebook](<${(this.lnk(message), false)}>)`,
+          )
+          .setColor(Colors.Yellow);
+        let messagePayload = { embeds: [warnEmbed, founderEmbed] };
+        await message.reply({ embeds: [founderEmbed] });
+        return;
       }
 
-      const embedPayload = [
-        {
-          description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
-          color: Colors.Blurple,
-          footer: { text: `UID: ${message.author.id}` },
-          timestamp: new Date(),
-        },
-      ];
-
-      if (!response.ok) return;
       const html = await response.text();
       const postData = parsePost(html);
-      const reference = message.reference;
-
+      const messageRef = message.reference;
+      const refMessage = messageRef
+        ? await message.channel.fetch(messageRef.messageId)
+        : undefined;
       let msg;
-      let referenceMessage;
-
-      if (reference) {
-        referenceMessage = await message.channel.messages.fetch(
-          reference.messageId,
-        );
-      }
+      const webhookClient = await this.getWebhook(message.channel);
 
       if (postData.videoLink) {
-        if (cache[postData.reelId]) {
+        const videoCacheLink = cache[postData.reelId];
+        if (videoCacheLink) {
           await webhookClient.send({
             content: wrapLinks(message.content) + `\n${cache[postData.reelId]}`,
             embeds: embedPayload,
@@ -242,19 +263,25 @@ export default class AutoReplyHandler extends Handler {
           });
           return;
         }
-
         const path = await downloadVideo(
           postData.videoLink,
           `${postData.reelId}.mp4`,
         );
+
+        if (!path) {
+          const embed = new EmbedBuilder()
+            .setTitle("This post is private or unavailable !")
+            .setDescription(
+              `[See post or photos and more on Facebook](<${facebookLink}>)`,
+            )
+            .setColor(Colors.Yellow);
+          await message.reply({ embeds: [embed, founderEmbed] });
+          return;
+        }
+
         const videoStats = fs.statSync(path);
 
-        if (!path) return;
-
-        if (
-          videoStats.size >= 10 * 1024 * 1024 &&
-          videoStats.size < 500 * 1024 * 1024
-        ) {
+        if (videoStats.size >= 10 * 1024 * 1024) {
           const messagePayload = {
             content:
               `${wrapLinks(message.content)}\n> -# ${facebedLinkConvert(facebookLink)}` +
@@ -274,20 +301,10 @@ export default class AutoReplyHandler extends Handler {
           } else {
             msg = await webhookClient.send(messagePayload);
           }
-        } else {
-          const embed = new EmbedBuilder()
-            .setTitle("This post is private or unavailable !")
-            .setDescription(
-              `[See posts, photos and more on Facebook](<${facebookLink}>)`,
-            )
-            .setColor(Colors.Yellow);
-          await message.reply({ embeds: [embed, ...embedPayload] });
+
           cache[postData.reelId] = msg.attachments.at(0).proxy_url;
           if (message.deletable) await message.delete();
         }
-
-        if (fs.readFileSync(path));
-        fs.unlinkSync(path);
       } else if (postData.imageLink) {
         const postEmbedDescription = `\n> **[${postData.title}](${wrapLinks(
           facebookLink,
@@ -305,6 +322,14 @@ export default class AutoReplyHandler extends Handler {
           username: message.author.displayName,
           avatarURL: message.author.avatarURL(),
         });
+      } else {
+        const embed = new EmbedBuilder()
+          .setTitle("This post is private or unavailable !")
+          .setDescription(
+            `[See posts, photos and more on Facebook](<${facebookLink}>)`,
+          )
+          .setColor(Colors.Yellow);
+        await message.reply({ embeds: [embed, founderEmbed] });
       }
     } catch (error) {
       this.client.logger.writeLog(error);
