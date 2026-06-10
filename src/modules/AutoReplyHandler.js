@@ -96,7 +96,7 @@ const wrapLinks = (text) => {
 const cache = {};
 
 export default class AutoReplyHandler extends Handler {
-  webhookClients = new Collection();
+  webhooks = new Collection();
 
   autoReplyData = [
     {
@@ -114,25 +114,29 @@ export default class AutoReplyHandler extends Handler {
 
   /**
    *
-   * @param {import("discord.js").GuildBasedChannel} channel
+   * @param {TextChannel} channel
    * @returns {Promise<WebhookClient>}
    */
   async createWebhook(channel) {
     const cacheId = `${channel.id}/${channel.guild.id}`;
 
-    let webhookClient = (await channel.fetchWebhooks()).find(
-      (wb) => wb.owner.id == this.client.user.id,
-    );
+    let webhook = this.webhooks.get(cacheId);
 
-    if (!wb) {
-      webhookClient = await channel.createWebhook({
+    if (!webhook) {
+      webhook = (await channel.fetchWebhooks()).find(
+        (wb) => wb.owner.id == this.client.user.id,
+      );
+    }
+
+    if (!webhook) {
+      webhook = await channel.createWebhook({
         name: this.client.user.displayName,
       });
     }
 
-    webhookClient = new WebhookClient({ url: wb.url });
+    const webhookClient = new WebhookClient({ url: webhook.url });
 
-    this.webhookClients.set(cacheId, webhookClient.url);
+    this.webhooks.set(cacheId, webhook.url);
 
     return webhookClient;
   }
@@ -175,20 +179,14 @@ export default class AutoReplyHandler extends Handler {
    * @returns {WebhookClient}
    */
   async getWebhook(channel) {
-    const cacheId = `${channel.id}/${channel.guild.id}`;
-    let webhook = this.webhookClients.get(cacheId);
-
-    if (webhook) return webhook;
-
+    let webhookClient;
     if (channel instanceof ThreadChannel) {
-      webhook = await this.createWebhook(channel.parent);
+      webhookClient = await this.createWebhook(channel.parent);
     } else {
-      webhook = await this.createWebhook(channel);
+      webhookClient = await this.createWebhook(channel);
     }
 
-    this.webhookClients.set(cacheId, webhook);
-
-    return webhook;
+    return webhookClient;
   }
 
   /**
