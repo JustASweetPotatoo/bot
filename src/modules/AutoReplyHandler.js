@@ -180,7 +180,7 @@ export default class AutoReplyHandler extends Handler {
 
     if (webhook) return webhook;
 
-    if (message.channel instanceof ThreadChannel) {
+    if (channel instanceof ThreadChannel) {
       webhook = await this.createWebhook(channel.parent);
     } else {
       webhook = await this.createWebhook(channel);
