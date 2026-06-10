@@ -132,10 +132,7 @@ export default class AutoReplyHandler extends Handler {
 
     webhookClient = new WebhookClient({ url: wb.url });
 
-    this.webhookClients.set(
-      cacheId,
-      webhookClient.url,
-    );
+    this.webhookClients.set(cacheId, webhookClient.url);
 
     return webhookClient;
   }
@@ -205,11 +202,13 @@ export default class AutoReplyHandler extends Handler {
     const fbUrls = urls.filter((url) =>
       url.startsWith("https://www.facebook.com"),
     );
+    let firstUrl = fbUrls.at(0);
 
-    const facebookUrl = urls.at(0);
-
-    if (toAPI) return url.replace("https://www.facebook.com", PYTHON_API);
-    return url.replace("https://www.facebook.com", "https://www.facebed.com");
+    if (toAPI) return firstUrl.replace("https://www.facebook.com", PYTHON_API);
+    return firstUrl.replace(
+      "https://www.facebook.com",
+      "https://www.facebed.com",
+    );
   }
 
   /**
