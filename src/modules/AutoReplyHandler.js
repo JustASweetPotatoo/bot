@@ -125,7 +125,7 @@ export default class AutoReplyHandler extends Handler {
     );
 
     if (!wb) {
-      wb = await channel.createWebhook({
+      webhookClient = await channel.createWebhook({
         name: this.client.user.displayName,
       });
     }
