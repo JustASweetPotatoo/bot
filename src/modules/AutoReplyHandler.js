@@ -120,7 +120,7 @@ export default class AutoReplyHandler extends Handler {
   async createWebhook(channel) {
     const cacheId = `${channel.id}/${channel.guild.id}`;
 
-    let wb = (await channel.fetchWebhooks()).find(
+    let webhookClient = (await channel.fetchWebhooks()).find(
       (wb) => wb.owner.id == this.client.user.id,
     );
 
