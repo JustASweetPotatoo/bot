@@ -255,6 +255,10 @@ export default class AutoReplyHandler extends Handler {
             embeds: [founderEmbed],
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
+            threadId:
+              message.channel instanceof ThreadChannel
+                ? message.channelId
+                : undefined,
           });
 
           await message.delete();
@@ -290,7 +294,13 @@ export default class AutoReplyHandler extends Handler {
             avatarURL: message.author.avatarURL(),
           };
 
-          msg = await webhookClient.send(messagePayload);
+          msg = await webhookClient.send({
+            ...messagePayload,
+            threadId:
+              message.channel instanceof ThreadChannel
+                ? message.channelId
+                : undefined,
+          });
           cache[postData.reelId] = postData.videoLink;
         } else {
           const messagePayload = {
@@ -305,7 +315,13 @@ export default class AutoReplyHandler extends Handler {
             avatarURL: message.author.avatarURL(),
           };
 
-          msg = await webhookClient.send(messagePayload);
+          msg = await webhookClient.send({
+            ...messagePayload,
+            threadId:
+              message.channel instanceof ThreadChannel
+                ? message.channelId
+                : undefined,
+          });
           cache[postData.reelId] = msg.attachments.at(0).proxy_url;
         }
 
@@ -326,6 +342,10 @@ export default class AutoReplyHandler extends Handler {
           embeds: [founderEmbed],
           username: message.author.displayName,
           avatarURL: message.author.avatarURL(),
+          threadId:
+            message.channel instanceof ThreadChannel
+              ? message.channelId
+              : undefined,
         });
       } else {
         const embed = new EmbedBuilder()
