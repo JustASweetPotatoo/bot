@@ -136,7 +136,7 @@ export default class AutoReplyHandler extends Handler {
 
     const webhookClient = new WebhookClient({ url: webhook.url });
 
-    this.webhooks.set(cacheId, webhook.url);
+    this.webhooks.set(cacheId, webhook);
 
     return webhookClient;
   }
@@ -256,7 +256,7 @@ export default class AutoReplyHandler extends Handler {
         if (videoCacheLink) {
           await webhookClient.send({
             content: wrapLinks(message.content) + `\n${cache[postData.reelId]}`,
-            embeds: embedPayload,
+            embeds: [founderEmbed],
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
           });
@@ -271,7 +271,7 @@ export default class AutoReplyHandler extends Handler {
           const embed = new EmbedBuilder()
             .setTitle("This post is private or unavailable !")
             .setDescription(
-              `[See post or photos and more on Facebook](<${facebookLink}>)`,
+              `[See post or photos and more on Facebook](<${facebookUrl}>)`,
             )
             .setColor(Colors.Yellow);
           await message.reply({ embeds: [embed, founderEmbed] });
@@ -283,41 +283,49 @@ export default class AutoReplyHandler extends Handler {
         if (videoStats.size >= 10 * 1024 * 1024) {
           const messagePayload = {
             content:
-              `${wrapLinks(message.content)}\n> -# ${facebedLinkConvert(facebookLink)}` +
-              (referenceMessage
-                ? `\n> -# ↪ [Reply to ↗ ${referenceMessage.member.displayName}](<${referenceMessage.url}>)`
+              `${wrapLinks(message.content)}\n> -# ${facebedLinkConvert(facebookUrl)}` +
+              (refMessage
+                ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
                 : ""),
-            embeds: embedPayload,
+            embeds: [founderEmbed],
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
           };
 
-          if (parentChannel instanceof ForumChannel) {
-            msg = await webhookClient.send({
-              ...messagePayload,
-              threadId: message.channel.id,
-            });
-          } else {
-            msg = await webhookClient.send(messagePayload);
-          }
+          msg = await webhookClient.send(messagePayload);
+          cache[postData.reelId] = postData.videoLink;
+        } else {
+          const messagePayload = {
+            content:
+              `${wrapLinks(message.content)}` +
+              (refMessage
+                ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
+                : ""),
+            files: [path],
+            embeds: [founderEmbed],
+            username: message.author.displayName,
+            avatarURL: message.author.avatarURL(),
+          };
 
+          msg = await webhookClient.send(messagePayload);
           cache[postData.reelId] = msg.attachments.at(0).proxy_url;
-          if (message.deletable) await message.delete();
         }
+
+        if (message.deletable) await message.delete();
       } else if (postData.imageLink) {
         const postEmbedDescription = `\n> **[${postData.title}](${wrapLinks(
-          facebookLink,
+          facebookUrl,
         )})**\n> ${postData.description}`;
 
         await webhookClient.send({
           content:
             wrapLinks(message.content) +
             postEmbedDescription +
-            (referenceMessage
-              ? `s\n> -# ↪ [Reply to ↗ ${referenceMesage.member.displayName}](<${referenceMessage.url}>)`
+            (refMessage
+              ? `s\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
               : ""),
           files: [postData.imageLink],
-          embeds: embedPayload,
+          embeds: [founderEmbed],
           username: message.author.displayName,
           avatarURL: message.author.avatarURL(),
         });
@@ -325,7 +333,7 @@ export default class AutoReplyHandler extends Handler {
         const embed = new EmbedBuilder()
           .setTitle("This post is private or unavailable !")
           .setDescription(
-            `[See posts, photos and more on Facebook](<${facebookLink}>)`,
+            `[See posts, photos and more on Facebook](<${facebookUrl}>)`,
           )
           .setColor(Colors.Yellow);
         await message.reply({ embeds: [embed, founderEmbed] });

@@ -1,3 +1,4 @@
+import { Events } from "discord.js";
 import MossClient from "../Client.js";
 
 export default class Logger {
@@ -8,7 +9,7 @@ export default class Logger {
   constructor(client) {
     this.client = client;
 
-    client.on("ready", () => {
+    client.on(Events.ClientReady, () => {
       this.guild = this.client.guilds.cache.get("811939594882777128");
       this.logChannel = this.guild.channels.cache.get("1438055867202277428");
     });
