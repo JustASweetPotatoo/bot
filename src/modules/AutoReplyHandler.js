@@ -28,7 +28,7 @@ function findFBUrl(content) {
   const urls = content.match(/https?:\/\/[^\s]+/g);
   if (!urls) return undefined;
   const fbUrls = urls.filter((url) =>
-    url.startsWith("https://www.facebook.com"),
+    url.startsWith("https://www.facebook.com/share/v/"),
   );
   return fbUrls.at(0);
 }
@@ -41,10 +41,6 @@ async function linkConvert(message) {
   const url = findFBUrl(message.content);
   if (!url) return;
   return url.replace("https://www.facebook.com", PYTHON_API);
-}
-
-function facebedLinkConvert(content) {
-  return content.replace("https://www.facebook.com", "https://www.facebed.com");
 }
 
 function trimEmbed(text, max = 4096) {
@@ -198,7 +194,7 @@ export default class AutoReplyHandler extends Handler {
     const urls = message.content.match(/https?:\/\/[^\s]+/g);
     if (!urls) return undefined;
     const fbUrls = urls.filter((url) =>
-      url.startsWith("https://www.facebook.com"),
+      url.startsWith("https://www.facebook.com/share/v/"),
     );
     let firstUrl = fbUrls.at(0);
 
@@ -260,6 +256,8 @@ export default class AutoReplyHandler extends Handler {
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
           });
+
+          await message.delete();
           return;
         }
         const path = await downloadVideo(
@@ -283,7 +281,7 @@ export default class AutoReplyHandler extends Handler {
         if (videoStats.size >= 10 * 1024 * 1024) {
           const messagePayload = {
             content:
-              `${wrapLinks(message.content)}\n> -# ${facebedLinkConvert(facebookUrl)}` +
+              `${wrapLinks(message.content)}\n> -# ${findFBUrl(message.content)}` +
               (refMessage
                 ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
                 : ""),
