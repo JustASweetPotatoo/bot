@@ -195,7 +195,7 @@ export default class AutoReplyHandler extends Handler {
     if (!urls) return undefined;
     const fbUrls = urls.filter((url) =>
       url.startsWith("https://www.facebook.com/share/v/"),
-    );
+    )
     let firstUrl = fbUrls.at(0);
 
     if (!firstUrl) return firstUrl;
