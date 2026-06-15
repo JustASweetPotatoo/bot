@@ -16,6 +16,7 @@ import Handler from "./Handler.js";
 import { calcLevel, getTotalXpForLevel } from "../utils/random.js";
 import { sendTemporatyMessage } from "../utils/autoMessage.js";
 import generateRankCard from "../utils/utils.js";
+import checkDiskSpace from "check-disk-space";
 
 export default class PrefixCommandHandler extends Handler {
   commands = {
@@ -79,6 +80,11 @@ export default class PrefixCommandHandler extends Handler {
     //   usage: "",
     //   function: this.scanMember,
     // },
+    "check-storage": {
+      name: "check-storage",
+      usage: "",
+      function: this.checkStorage,
+    },
   };
 
   tutien = {
@@ -119,6 +125,24 @@ export default class PrefixCommandHandler extends Handler {
 
   constructor(options) {
     super(options);
+  }
+  /**
+   *
+   * @param {Message<true>} message
+   * @param {Array<string>} args
+   */
+  async checkStorage(message, args) {
+    checkDiskSpace("/").then((diskSpace) => {
+      this.client.logger.writeLog(
+        `Tổng: ${(diskSpace.size / 1024 ** 3).toFixed(2)} GB`,
+      );
+      this.client.logger.writeLog(
+        `Còn trống: ${(diskSpace.free / 1024 ** 3).toFixed(2)} GB`,
+      );
+      this.client.logger.writeLog(
+        `Đã dùng: ${((diskSpace.size - diskSpace.free) / 1024 ** 3).toFixed(2)} GB`,
+      );
+    });
   }
 
   /**
