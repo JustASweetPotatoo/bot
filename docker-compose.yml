@@ -4,25 +4,38 @@ services:
   mysql:
     image: mysql:8
     container_name: mysql
-    mem_limit: 1g
     restart: always
+    mem_limit: 1g
+
     environment:
       MYSQL_ROOT_PASSWORD: Admin@123
+      MYSQL_ROOT_HOST: "%"
       MYSQL_DATABASE: bot
+      MYSQL_USER: bot
+      MYSQL_PASSWORD: bot123
+
     ports:
       - "3306:3306"
+
     volumes:
       - mysql_data:/var/lib/mysql
+
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -ubot -p$$MYSQL_PASSWORD --silent || exit 1",
+        ]
+      interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 30s
 
   python:
     build: ./python
     container_name: py-server
     restart: always
+
     ports:
       - "9812:9812"
 
@@ -30,20 +43,25 @@ services:
     build:
       context: .
       dockerfile: DockerFile
+
     container_name: bot
     restart: always
+
     depends_on:
       mysql:
         condition: service_healthy
       python:
         condition: service_started
+
     environment:
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_USER: root
-      DB_PASS: Admin@123
+      DB_USER: bot
+      DB_PASS: bot123
       DB_NAME: bot
+
       PYTHON_API: http://python:9812
 
 volumes:
