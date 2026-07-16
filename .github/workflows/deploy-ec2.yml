@@ -2,15 +2,8 @@ name: Deploy Docker to EC2
 
 on:
   push:
-    branches: ["master"]
-
-env:
-  AWS_REGION: ap-southeast-2
-  ECR_REPOSITORY: bot
-  ECS_SERVICE: bot-service
-  ECS_CLUSTER: bot-cluster
-  ECS_TASK_DEFINITION: .aws/task-definition.json
-  CONTAINER_NAME: bot
+    branches:
+      - master
 
 jobs:
   deploy:
@@ -20,9 +13,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx (recommended for multi-platform builds)
-        uses: docker/setup-buildx-action@v4
-
       - name: Setup SSH key
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
@@ -30,30 +20,74 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
-            set -e
+          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} <<EOF
+          set -e
 
-            echo "🚀 Pulling latest code..."
+          REPO="${{ github.repository }}"
 
-            if [ -d ~/bot ]; then
-              cd ~/bot
-              git fetch origin
-              git reset --hard origin/master
-            else
-              git clone https://github.com/${GITHUB_REPOSITORY}.git ~/bot
-              cd ~/bot
-            fi
+          echo "===== Disk usage ====="
+          df -h
 
-            echo "Stopping old container (if exists)"
-            docker stop bot || true
-            docker rm bot || true
+          ############################################
+          # Install Docker if not installed
+          ############################################
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "Docker not found. Installing..."
 
-            echo "DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}" > .env
-      
-            echo "🐳 Deploy with Docker Compose..."
-            docker compose down || true
-            docker compose up -d --build
+            sudo apt-get update
+            curl -fsSL https://get.docker.com | sudo sh
 
-            echo "🧹 Cleanup..."
-            docker system prune -af
+            sudo usermod -aG docker \$USER
+
+            sudo systemctl enable docker
+            sudo systemctl start docker
+          fi
+
+          docker --version
+          docker compose version || true
+
+          ############################################
+          # Cleanup
+          ############################################
+          docker compose down --remove-orphans || true
+          docker stop bot || true
+          docker rm bot || true
+
+          docker system prune -af --volumes || true
+          docker builder prune -af || true
+
+          ############################################
+          # Pull latest code
+          ############################################
+          if [ -d "\$HOME/bot/.git" ]; then
+            cd \$HOME/bot
+            git fetch origin
+            git reset --hard origin/master
+          else
+            rm -rf \$HOME/bot
+            git clone https://github.com/\$REPO.git \$HOME/bot
+            cd \$HOME/bot
+          fi
+
+          ############################################
+          # Create .env
+          ############################################
+          echo "DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}" > .env
+
+          ############################################
+          # Build & Start
+          ############################################
+          docker compose up -d --build
+
+          ############################################
+          # Final cleanup
+          ############################################
+          docker image prune -af || true
+          docker builder prune -af || true
+
+          echo "===== Done ====="
+
+          df -h
+          docker ps -a
+
           EOF
