@@ -4,7 +4,7 @@ services:
   mysql:
     image: mysql:8
     container_name: mysql
-    mem_limit: 300m  
+    mem_limit: 300m
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: Admin@123
@@ -27,7 +27,9 @@ services:
       - "9812:9812"
 
   bot:
-    build: .
+    build:
+      context: .
+      dockerfile: DockerFile
     container_name: bot
     restart: always
     depends_on:
