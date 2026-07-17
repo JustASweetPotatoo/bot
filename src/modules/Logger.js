@@ -9,8 +9,9 @@ export default class Logger {
   constructor(client) {
     this.client = client;
 
-    client.on(Events.ClientReady, () => {
-      this.guild = this.client.guilds.cache.get("811939594882777128");
+    client.on(Events.ClientReady, async () => {
+      this.guild = await this.client.guilds.get("811939594882777128");
+      if (!this.guild) return;
       this.logChannel = this.guild.channels.cache.get("1438055867202277428");
     });
   }
