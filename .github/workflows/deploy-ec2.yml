@@ -106,7 +106,7 @@ jobs:
 
           echo "Installing dependencies..."
 
-          npm ci --omit=dev
+          npm i
 
           ############################################
           # Create systemd service
