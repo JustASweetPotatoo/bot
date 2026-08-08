@@ -27,9 +27,7 @@ const { PYTHON_API } = process.env;
 function findFBUrl(content) {
   const urls = content.match(/https?:\/\/[^\s]+/g);
   if (!urls) return undefined;
-  const fbUrls = urls.filter((url) =>
-    url.startsWith("https://www.facebook.com/share/v/"),
-  );
+  const fbUrls = urls.filter((url) => url.startsWith("https://www.facebook.com/share/v/"));
   return fbUrls.at(0);
 }
 
@@ -98,10 +96,11 @@ export default class AutoReplyHandler extends Handler {
     {
       match: "mmb",
       wildcard: true,
-      mentionUser: true,
+      mentionUser: false,
       content: [
         {
-          replyMessage: false,
+          replyUser: false,
+          replyMentioned: false,
           content: "mẹ mày béo !\n# <:capoo_sleep:1277690970531561595>",
         },
       ],
@@ -112,11 +111,13 @@ export default class AutoReplyHandler extends Handler {
       mentionUser: true,
       content: [
         {
-          replyMessage: true,
-          content: "Toi da truong thanh tu trong dau kho\nToi dung len tu dong tro tan\nToi dung len tu mot dong tro tan nguoi lanh\nNhu mot bong hoa no giua sa mac\nToi co ngay hom nay a, la do toi may man cong them mot su kieu hanh kien dinh\nKhong de gi ma lung lay duoc toi"
-        }
-      ]
-    }
+          replyUser: true,
+          replyMentioned: false,
+          content:
+            "Toi da truong thanh tu trong dau kho\nToi dung len tu dong tro tan\nToi dung len tu mot dong tro tan nguoi lanh\nNhu mot bong hoa no giua sa mac\nToi co ngay hom nay a, la do toi may man cong them mot su kieu hanh kien dinh\nKhong de gi ma lung lay duoc toi",
+        },
+      ],
+    },
   ];
 
   /**
@@ -130,9 +131,7 @@ export default class AutoReplyHandler extends Handler {
     let webhook = this.webhooks.get(cacheId);
 
     if (!webhook) {
-      webhook = (await channel.fetchWebhooks()).find(
-        (wb) => wb.owner.id == this.client.user.id,
-      );
+      webhook = (await channel.fetchWebhooks()).find((wb) => wb.owner.id == this.client.user.id);
     }
 
     if (!webhook) {
@@ -156,9 +155,7 @@ export default class AutoReplyHandler extends Handler {
   async getFacebookMedia(message) {
     const extractedLinks = message.content.match(/https?:\/\/[^\s]+/g);
     if (!extractedLinks) return undefined;
-    const facebookLinks = extractedLinks.filter((url) =>
-      url.startsWith("https://www.facebook.com"),
-    );
+    const facebookLinks = extractedLinks.filter((url) => url.startsWith("https://www.facebook.com"));
     let firstLink = facebookLinks.at(0);
     if (firstLink) return undefined;
     firstLink = firstLink.replace("https://www.facebook.com", PYTHON_API);
@@ -169,8 +166,7 @@ export default class AutoReplyHandler extends Handler {
 
     const htmlResponseBody = await response.text();
     const $ = cheerio.load(html);
-    const cheerioGet = (name) =>
-      $(`meta[property="${name}"]`).attr("content") ?? null;
+    const cheerioGet = (name) => $(`meta[property="${name}"]`).attr("content") ?? null;
     const postMetaData = {
       reelId: cheerioGet("og:url")?.match(/reel\/(\d+)/)?.[1] ?? null,
       videoLink: cheerioGet("og:video:secure_url"),
@@ -204,18 +200,13 @@ export default class AutoReplyHandler extends Handler {
   lnk(message, toAPI = true) {
     const urls = message.content.match(/https?:\/\/[^\s]+/g);
     if (!urls) return undefined;
-    const fbUrls = urls.filter((url) =>
-      url.startsWith("https://www.facebook.com/share/v/"),
-    )
+    const fbUrls = urls.filter((url) => url.startsWith("https://www.facebook.com/share/v/"));
     let firstUrl = fbUrls.at(0);
 
     if (!firstUrl) return firstUrl;
 
     if (toAPI) return firstUrl.replace("https://www.facebook.com", PYTHON_API);
-    return firstUrl.replace(
-      "https://www.facebook.com",
-      "https://www.facebed.com",
-    );
+    return firstUrl.replace("https://www.facebook.com", "https://www.facebed.com");
   }
 
   /**
@@ -240,9 +231,7 @@ export default class AutoReplyHandler extends Handler {
       if (!response.ok) {
         const warnEmbed = new EmbedBuilder()
           .setTitle("This post is private or unavailable !")
-          .setDescription(
-            `[See posts, photos and more on Facebook](<${(this.lnk(message), false)}>)`,
-          )
+          .setDescription(`[See posts, photos and more on Facebook](<${(this.lnk(message), false)}>)`)
           .setColor(Colors.Yellow);
         let messagePayload = { embeds: [warnEmbed, founderEmbed] };
         await message.reply({ embeds: [founderEmbed] });
@@ -252,9 +241,7 @@ export default class AutoReplyHandler extends Handler {
       const html = await response.text();
       const postData = parsePost(html);
       const messageRef = message.reference;
-      const refMessage = messageRef
-        ? await message.channel.fetch(messageRef.messageId)
-        : undefined;
+      const refMessage = messageRef ? await message.channel.fetch(messageRef.messageId) : undefined;
       let msg;
       const webhookClient = await this.getWebhook(message.channel);
 
@@ -266,26 +253,18 @@ export default class AutoReplyHandler extends Handler {
             embeds: [founderEmbed],
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
-            threadId:
-              message.channel instanceof ThreadChannel
-                ? message.channelId
-                : undefined,
+            threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
           });
 
           await message.delete();
           return;
         }
-        const path = await downloadVideo(
-          postData.videoLink,
-          `${postData.reelId}.mp4`,
-        );
+        const path = await downloadVideo(postData.videoLink, `${postData.reelId}.mp4`);
 
         if (!path) {
           const embed = new EmbedBuilder()
             .setTitle("This post is private or unavailable !")
-            .setDescription(
-              `[See post or photos and more on Facebook](<${facebookUrl}>)`,
-            )
+            .setDescription(`[See post or photos and more on Facebook](<${facebookUrl}>)`)
             .setColor(Colors.Yellow);
           await message.reply({ embeds: [embed, founderEmbed] });
           return;
@@ -297,9 +276,7 @@ export default class AutoReplyHandler extends Handler {
           const messagePayload = {
             content:
               `${wrapLinks(message.content)}\n> -# ${findFBUrl(message.content)}` +
-              (refMessage
-                ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
-                : ""),
+              (refMessage ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)` : ""),
             embeds: [founderEmbed],
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
@@ -307,19 +284,14 @@ export default class AutoReplyHandler extends Handler {
 
           msg = await webhookClient.send({
             ...messagePayload,
-            threadId:
-              message.channel instanceof ThreadChannel
-                ? message.channelId
-                : undefined,
+            threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
           });
           cache[postData.reelId] = postData.videoLink;
         } else {
           const messagePayload = {
             content:
               `${wrapLinks(message.content)}` +
-              (refMessage
-                ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
-                : ""),
+              (refMessage ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)` : ""),
             files: [path],
             embeds: [founderEmbed],
             username: message.author.displayName,
@@ -328,10 +300,7 @@ export default class AutoReplyHandler extends Handler {
 
           msg = await webhookClient.send({
             ...messagePayload,
-            threadId:
-              message.channel instanceof ThreadChannel
-                ? message.channelId
-                : undefined,
+            threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
           });
           cache[postData.reelId] = msg.attachments.at(0).proxy_url;
         }
@@ -346,24 +315,17 @@ export default class AutoReplyHandler extends Handler {
           content:
             wrapLinks(message.content) +
             postEmbedDescription +
-            (refMessage
-              ? `s\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
-              : ""),
+            (refMessage ? `s\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)` : ""),
           files: [postData.imageLink],
           embeds: [founderEmbed],
           username: message.author.displayName,
           avatarURL: message.author.avatarURL(),
-          threadId:
-            message.channel instanceof ThreadChannel
-              ? message.channelId
-              : undefined,
+          threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
         });
       } else {
         const embed = new EmbedBuilder()
           .setTitle("This post is private or unavailable !")
-          .setDescription(
-            `[See posts, photos and more on Facebook](<${facebookUrl}>)`,
-          )
+          .setDescription(`[See posts, photos and more on Facebook](<${facebookUrl}>)`)
           .setColor(Colors.Yellow);
         await message.reply({ embeds: [embed, founderEmbed] });
       }
@@ -379,14 +341,12 @@ export default class AutoReplyHandler extends Handler {
   onMessage = async (message) => {
     try {
       if (message.author.bot) return;
-      if (message.content.startsWith("c>")) return;
+      if (message.content.startsWith(">")) return;
 
       this.processFacebookUrl(message);
 
       const autoReplyItem = this.autoReplyData.find((value) =>
-        value.wildcard
-          ? message.content.includes(value.match)
-          : message.content.startsWith(value.match),
+        value.wildcard ? message.content.includes(value.match) : message.content.startsWith(value.match),
       );
 
       if (!autoReplyItem) return;
@@ -394,19 +354,24 @@ export default class AutoReplyHandler extends Handler {
       autoReplyItem.content.forEach(async (content, index) => {
         let sendText = "undefined";
         let mentionText = undefined;
-        const mentionedUser = message.mentions.users.first();
-        if (
-          (!mentionedUser && autoReplyItem.mentionUser) ||
-          mentionedUser.id === "866628870123552798"
-        )
-          return;
-        else mentionText = `<@${mentionedUser.id}> `;
+        let mentionedUser = message.mentions.users.first();
 
-        sendText =
-          index == 0 ? `${mentionText}${content.content}` : content.content;
-        content.replyMessage && message.reference && message.reference.messageId
-          ? await message.reply(sendText)
-          : await message.channel.send(sendText);
+        if (autoReplyItem.match == "mmb" && mentionedUser && mentionedUser.id == "866628870123552798") {
+          return;
+        }
+
+        if (content.replyMentioned) {
+          if (!mentionedUser) return;
+          mentionText = `<@${mentionedUser.id}>`;
+        }
+
+        sendText = `${mentionText ? `\n${mentionText}` : ""}${content.content}`;
+
+        if (content.replyUser) {
+          await message.reply(sendText);
+        } else {
+          await message.channel.send(sendText);
+        }
       });
     } catch (error) {
       this.client.logger.writeLog(error);
