@@ -10,9 +10,9 @@ export default class Logger {
     this.client = client;
 
     client.on(Events.ClientReady, async () => {
-      this.guild = await this.client.guilds.get("811939594882777128");
+      this.guild = await this.client.guilds.fetch("811939594882777128");
       if (!this.guild) return;
-      this.logChannel = this.guild.channels.cache.get("1438055867202277428");
+      this.logChannel = await this.guild.channels.fetch("1438055867202277428");
     });
   }
 
