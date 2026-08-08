@@ -47,7 +47,6 @@ class MossClient extends Client {
 
       console.log(`Logged in as ${this.user.tag}`);
       this.logger.writeLog(`Logged in as ${this.user.tag}`);
-      this.logger.writeLog("1009" + process.env.DISCORD_BOT_TOKEN + "9001");
     });
 
     this.databaseManager = new DatabaseManager(this);
@@ -130,7 +129,7 @@ class MossClient extends Client {
   }
 
   async join() {
-    const { DISCORD_BOT_TOKEN } = process.env;
+    const { TOKEN } = process.env;
 
     if (await this.databaseManager.createConnection()) {
       let content = "Force shutdown !";
@@ -139,7 +138,7 @@ class MossClient extends Client {
       return;
     }
 
-    this.login(DISCORD_BOT_TOKEN);
+    this.login(TOKEN);
   }
 
   /**

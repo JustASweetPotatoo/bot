@@ -106,6 +106,17 @@ export default class AutoReplyHandler extends Handler {
         },
       ],
     },
+    {
+      match: "#toidatruongthanh",
+      wildcard: true,
+      mentionUser: true,
+      content: [
+        {
+          replyMessage: true,
+          content: "Toi da truong thanh tu trong dau kho\nToi dung len tu dong tro tan\nToi dung len tu mot dong tro tan nguoi lanh\nNhu mot bong hoa no giua sa mac\nToi co ngay hom nay a, la do toi may man cong them mot su kieu hanh kien dinh\nKhong de gi ma lung lay duoc toi"
+        }
+      ]
+    }
   ];
 
   /**
