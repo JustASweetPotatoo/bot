@@ -1,4 +1,4 @@
-name: Deploy Docker to EC2
+name: Deploy to EC2
 
 on:
   push:
@@ -10,9 +10,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
       - name: Setup SSH key
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
@@ -20,74 +17,195 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} <<EOF
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -i key.pem \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} <<EOF
+
           set -e
 
           REPO="${{ github.repository }}"
+          APP_DIR="\$HOME/bot"
+          SERVICE_NAME="lvupbot"
 
-          echo "===== Disk usage ====="
+          echo "========================================"
+          echo "        LVUPBOT DEPLOY"
+          echo "========================================"
+
+          echo "===== System ====="
+          free -h
           df -h
 
           ############################################
-          # Install Docker if not installed
+          # Install Git
           ############################################
-          if ! command -v docker >/dev/null 2>&1; then
-            echo "Docker not found. Installing..."
+
+          if ! command -v git >/dev/null 2>&1; then
+            echo "Installing Git..."
 
             sudo apt-get update
-            curl -fsSL https://get.docker.com | sudo sh
-
-            sudo usermod -aG docker \$USER
-
-            sudo systemctl enable docker
-            sudo systemctl start docker
+            sudo apt-get install -y git
           fi
 
-          docker --version
-          docker compose version || true
+          ############################################
+          # Install Node.js
+          ############################################
+
+          if ! command -v node >/dev/null 2>&1; then
+            echo "Installing Node.js 22..."
+
+            curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+          fi
+
+          echo "Node: \$(node --version)"
+          echo "NPM:  \$(npm --version)"
 
           ############################################
-          # Cleanup
+          # Clone / Update repository
           ############################################
-          docker compose down --remove-orphans || true
-          docker stop bot || true
-          docker rm bot || true
 
-          docker system prune -af --volumes || true
-          docker builder prune -af || true
+          if [ -d "\$APP_DIR/.git" ]; then
 
-          ############################################
-          # Pull latest code
-          ############################################
-          if [ -d "\$HOME/bot/.git" ]; then
-            cd \$HOME/bot
+            echo "Updating repository..."
+
+            cd "\$APP_DIR"
+
             git fetch origin
             git reset --hard origin/master
+            git clean -fd
+
           else
-            rm -rf \$HOME/bot
-            git clone https://github.com/\$REPO.git \$HOME/bot
-            cd \$HOME/bot
+
+            echo "Cloning repository..."
+
+            rm -rf "\$APP_DIR"
+
+            git clone \
+              "https://github.com/\$REPO.git" \
+              "\$APP_DIR"
+
+            cd "\$APP_DIR"
+
           fi
 
           ############################################
           # Create .env
           ############################################
-          echo "DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}" > .env
+
+          echo "Creating environment..."
+
+          cat > .env <<ENV
+          TOKEN=${{ secrets.TOKEN }}
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASS=${{ secrets.DB_PASS }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_PORT=3306
+          ENV
 
           ############################################
-          # Build & Start
+          # Install dependencies
           ############################################
-          docker compose up -d --build
+
+          echo "Installing dependencies..."
+
+          npm ci --omit=dev
 
           ############################################
-          # Final cleanup
+          # Create systemd service
           ############################################
-          docker image prune -af || true
-          docker builder prune -af || true
 
-          echo "===== Done ====="
+          echo "Creating systemd service..."
+
+          sudo tee /etc/systemd/system/\$SERVICE_NAME.service > /dev/null <<SERVICE
+          [Unit]
+          Description=LVUP Discord Bot
+          After=network.target
+
+          [Service]
+          Type=simple
+
+          User=${{ secrets.EC2_USER }}
+          WorkingDirectory=\$APP_DIR
+
+          Environment=NODE_ENV=production
+
+          ExecStart=/usr/bin/node \$APP_DIR/index.js
+
+          Restart=always
+          RestartSec=5
+
+          # Prevent Node.js from consuming all RAM
+          Environment=NODE_OPTIONS=--max-old-space-size=384
+
+          [Install]
+          WantedBy=multi-user.target
+          SERVICE
+
+          ############################################
+          # Restart service
+          ############################################
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable \$SERVICE_NAME
+          sudo systemctl restart \$SERVICE_NAME
+
+          ############################################
+          # Wait for application
+          ############################################
+
+          sleep 3
+
+          ############################################
+          # Check application
+          ############################################
+
+          if sudo systemctl is-active --quiet \$SERVICE_NAME; then
+
+            echo "========================================"
+            echo "       DEPLOYMENT SUCCESSFUL"
+            echo "========================================"
+
+          else
+
+            echo "========================================"
+            echo "       DEPLOYMENT FAILED"
+            echo "========================================"
+
+            sudo systemctl status \
+              \$SERVICE_NAME \
+              --no-pager
+
+            echo "===== Logs ====="
+
+            sudo journalctl \
+              -u \$SERVICE_NAME \
+              -n 100 \
+              --no-pager
+
+            exit 1
+
+          fi
+
+          ############################################
+          # Status
+          ############################################
+
+          echo "===== Service ====="
+
+          sudo systemctl status \
+            \$SERVICE_NAME \
+            --no-pager
+
+          echo "===== Memory ====="
+
+          free -h
+
+          echo "===== Disk ====="
 
           df -h
-          docker ps -a
+
+          echo "===== Done ====="
 
           EOF
