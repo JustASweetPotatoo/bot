@@ -200,7 +200,7 @@ export default class AutoReplyHandler extends Handler {
   lnk(message, toAPI = true) {
     const urls = message.content.match(/https?:\/\/[^\s]+/g);
     if (!urls) return undefined;
-    const fbUrls = urls.filter((url) => url.startsWith("https://www.facebook.com/share/v/"));
+    const fbUrls = urls.filter((url) => url.startsWith("https://www.facebook.com/share/r/"));
     let firstUrl = fbUrls.at(0);
 
     if (!firstUrl) return firstUrl;
