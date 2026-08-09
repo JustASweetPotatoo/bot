@@ -30,6 +30,7 @@ jobs:
           API_SERVICE_NAME="lvupbot-api"
           API_DIR="\$APP_DIR/python"
           API_VENV="\$API_DIR/.venv"
+          PYTHON_VERSION="3.12.10"
 
           echo "========================================"
           echo "        LVUPBOT DEPLOY"
@@ -60,17 +61,27 @@ jobs:
           echo "Node: \$(node --version)"
           echo "NPM:  \$(npm --version)"
 
-          if ! command -v python3.12 >/dev/null 2>&1; then
-            echo "Installing Python 3.12..."
+          if command -v python3.12 >/dev/null 2>&1; then
+            API_PYTHON="\$(command -v python3.12)"
+          else
+            echo "Building Python \$PYTHON_VERSION with pyenv..."
             sudo apt-get update
-            sudo apt-get install -y software-properties-common
-            sudo add-apt-repository -y ppa:deadsnakes/ppa
-            sudo apt-get update
-            sudo apt-get install -y python3.12 python3.12-venv
-          elif ! python3.12 -m venv --help >/dev/null 2>&1; then
-            echo "Installing Python 3.12 venv support..."
-            sudo apt-get update
-            sudo apt-get install -y python3.12-venv
+            sudo apt-get install -y \
+              build-essential curl libbz2-dev libffi-dev liblzma-dev \
+              libncurses-dev libreadline-dev libsqlite3-dev libssl-dev \
+              tk-dev xz-utils zlib1g-dev
+
+            export PYENV_ROOT="\$HOME/.pyenv"
+            export PATH="\$PYENV_ROOT/bin:\$PATH"
+
+            if [ ! -x "\$PYENV_ROOT/bin/pyenv" ]; then
+              curl https://pyenv.run | bash
+            fi
+
+            export PATH="\$PYENV_ROOT/bin:\$PYENV_ROOT/shims:\$PATH"
+            eval "\$(pyenv init -)"
+            pyenv install -s "\$PYTHON_VERSION"
+            API_PYTHON="\$PYENV_ROOT/versions/\$PYTHON_VERSION/bin/python"
           fi
 
           ############################################
@@ -126,7 +137,7 @@ jobs:
 
           echo "Installing API dependencies..."
 
-          python3.12 -m venv "\$API_VENV"
+          "\$API_PYTHON" -m venv "\$API_VENV"
           "\$API_VENV/bin/pip" install --upgrade pip
           "\$API_VENV/bin/pip" install -r "\$API_DIR/requirements.txt"
 
