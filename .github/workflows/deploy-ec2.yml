@@ -27,6 +27,9 @@ jobs:
           REPO="${{ github.repository }}"
           APP_DIR="\$HOME/bot"
           SERVICE_NAME="lvupbot"
+          API_SERVICE_NAME="lvupbot-api"
+          API_DIR="\$APP_DIR/python"
+          API_VENV="\$API_DIR/.venv"
 
           echo "========================================"
           echo "        LVUPBOT DEPLOY"
@@ -56,6 +59,16 @@ jobs:
 
           echo "Node: \$(node --version)"
           echo "NPM:  \$(npm --version)"
+
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "Installing Python..."
+            sudo apt-get update
+            sudo apt-get install -y python3 python3-venv
+          elif ! python3 -m venv --help >/dev/null 2>&1; then
+            echo "Installing Python venv support..."
+            sudo apt-get update
+            sudo apt-get install -y python3-venv
+          fi
 
           ############################################
           # Clone / Update repository
@@ -108,6 +121,12 @@ jobs:
 
           npm i
 
+          echo "Installing API dependencies..."
+
+          python3 -m venv "\$API_VENV"
+          "\$API_VENV/bin/pip" install --upgrade pip
+          "\$API_VENV/bin/pip" install -r "\$API_DIR/requirements.txt"
+
           ############################################
           # Create systemd service
           ############################################
@@ -139,13 +158,37 @@ jobs:
           WantedBy=multi-user.target
           SERVICE
 
+          sudo tee /etc/systemd/system/\$API_SERVICE_NAME.service > /dev/null <<SERVICE
+          [Unit]
+          Description=LVUP Facebed API Server
+          After=network.target
+
+          [Service]
+          Type=simple
+
+          User=${{ secrets.EC2_USER }}
+          WorkingDirectory=\$API_DIR
+
+          Environment=PYTHONUNBUFFERED=1
+
+          ExecStart=\$API_VENV/bin/python \$API_DIR/main.py
+
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+          SERVICE
+
           ############################################
           # Restart service
           ############################################
 
           sudo systemctl daemon-reload
           sudo systemctl enable \$SERVICE_NAME
+          sudo systemctl enable \$API_SERVICE_NAME
           sudo systemctl restart \$SERVICE_NAME
+          sudo systemctl restart \$API_SERVICE_NAME
 
           ############################################
           # Wait for application
@@ -157,7 +200,8 @@ jobs:
           # Check application
           ############################################
 
-          if sudo systemctl is-active --quiet \$SERVICE_NAME; then
+           if sudo systemctl is-active --quiet \$SERVICE_NAME && \
+             sudo systemctl is-active --quiet \$API_SERVICE_NAME; then
 
             echo "========================================"
             echo "       DEPLOYMENT SUCCESSFUL"
@@ -171,12 +215,14 @@ jobs:
 
             sudo systemctl status \
               \$SERVICE_NAME \
+              \$API_SERVICE_NAME \
               --no-pager
 
             echo "===== Logs ====="
 
             sudo journalctl \
               -u \$SERVICE_NAME \
+              -u \$API_SERVICE_NAME \
               -n 100 \
               --no-pager
 
@@ -192,6 +238,7 @@ jobs:
 
           sudo systemctl status \
             \$SERVICE_NAME \
+            \$API_SERVICE_NAME \
             --no-pager
 
           echo "===== Memory ====="
