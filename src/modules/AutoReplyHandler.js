@@ -17,7 +17,7 @@ import { configDotenv } from "dotenv";
 import * as cheerio from "cheerio";
 
 configDotenv();
-const { PYTHON_API } = process.env;
+const PYTHON_API = process.env.PYTHON_API || "http://localhost:9812";
 
 /**
  *
@@ -231,10 +231,9 @@ export default class AutoReplyHandler extends Handler {
       if (!response.ok) {
         const warnEmbed = new EmbedBuilder()
           .setTitle("This post is private or unavailable !")
-          .setDescription(`[See posts, photos and more on Facebook](<${(this.lnk(message), false)}>)`)
+          .setDescription(`[See posts, photos and more on Facebook](<${this.lnk(message, false)}>)`)
           .setColor(Colors.Yellow);
-        let messagePayload = { embeds: [warnEmbed, founderEmbed] };
-        await message.reply({ embeds: [founderEmbed] });
+        await message.reply({ embeds: [warnEmbed, founderEmbed] });
         return;
       }
 

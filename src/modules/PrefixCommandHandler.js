@@ -133,15 +133,9 @@ export default class PrefixCommandHandler extends Handler {
    */
   async checkStorage(message, args) {
     checkDiskSpace("/").then((diskSpace) => {
-      this.client.logger.writeLog(
-        `Tổng: ${(diskSpace.size / 1024 ** 3).toFixed(2)} GB`,
-      );
-      this.client.logger.writeLog(
-        `Còn trống: ${(diskSpace.free / 1024 ** 3).toFixed(2)} GB`,
-      );
-      this.client.logger.writeLog(
-        `Đã dùng: ${((diskSpace.size - diskSpace.free) / 1024 ** 3).toFixed(2)} GB`,
-      );
+      this.client.logger.writeLog(`Tổng: ${(diskSpace.size / 1024 ** 3).toFixed(2)} GB`);
+      this.client.logger.writeLog(`Còn trống: ${(diskSpace.free / 1024 ** 3).toFixed(2)} GB`);
+      this.client.logger.writeLog(`Đã dùng: ${((diskSpace.size - diskSpace.free) / 1024 ** 3).toFixed(2)} GB`);
     });
   }
 
@@ -151,17 +145,8 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async createPinMessage(message, args) {
-    if (
-      !(
-        message.member.permissions.has("ManageMessages") ||
-        message.member.permissions.has("Administrator")
-      )
-    ) {
-      sendTemporatyMessage(
-        message,
-        { content: "You don't have permission to use this command !" },
-        5000,
-      );
+    if (!(message.member.permissions.has("ManageMessages") || message.member.permissions.has("Administrator"))) {
+      sendTemporatyMessage(message, { content: "You don't have permission to use this command !" }, 5000);
       return;
     }
 
@@ -177,93 +162,56 @@ export default class PrefixCommandHandler extends Handler {
     const channel = message.channel;
 
     if (!channel.isTextBased()) {
-      console.log(channel.isTextBased());
       return;
     }
 
     let amount = 3;
     if (args[1]) {
-      amount = parseInt(args[1]);
+      const parsedAmount = Number.parseInt(args[1], 10);
+      if (Number.isInteger(parsedAmount) && parsedAmount > 0) {
+        amount = parsedAmount;
+      }
     }
 
-    let initCollection = await channel.messages.fetch({
-      before: message.id,
-      limit: 100,
-    });
-    let firstMessage = initCollection.first();
+    const messagesToDelete = new Collection();
+    let remaining = amount;
+    let before = message.id;
 
-    if (!firstMessage) {
-      await sendTemporatyMessage(
-        message,
-        { content: "No message to delete !" },
-        5000,
-      );
+    while (remaining > 0) {
+      const limit = Math.min(100, remaining);
+      const fetchedMessages = await channel.messages.fetch({
+        before,
+        limit,
+      });
+
+      if (fetchedMessages.size === 0) break;
+
+      fetchedMessages.forEach((fetchedMessage) => {
+        messagesToDelete.set(fetchedMessage.id, fetchedMessage);
+      });
+      remaining -= fetchedMessages.size;
+      before = fetchedMessages.last().id;
+
+      if (fetchedMessages.size < limit) break;
+    }
+
+    if (messagesToDelete.size === 0) {
+      await sendTemporatyMessage(message, { content: "No message to delete !" }, 5000);
       return;
     }
 
-    let messageChannelManager = channel.messages;
-    let messageCount = 1;
+    const bulkDeletableMessages = messagesToDelete.filter((fetchedMessage) => fetchedMessage.bulkDeletable);
+    const oldMessages = messagesToDelete.filter((fetchedMessage) => !fetchedMessage.bulkDeletable);
 
-    const bulkDeletableMessageChunks = [];
-    const oldMessageChunks = [];
-
-    let oldChunk1 = new Collection();
-    let oldChunk2 = new Collection();
-
-    firstMessage.bulkDeletable
-      ? oldChunk1.set(firstMessage.id, firstMessage)
-      : oldChunk2.set(firstMessage.id, firstMessage);
-
-    do {
-      const fetchedMessageCollection = await messageChannelManager.fetch({
-        limit: amount >= 100 ? 100 : amount - 1,
-        before: firstMessage.id,
-      });
-
-      fetchedMessageCollection.forEach((message) => {
-        if (message.bulkDeletable) {
-          if (oldChunk1.size == 100) {
-            bulkDeletableMessageChunks.push(oldChunk1);
-            oldChunk1.clear();
-          }
-
-          oldChunk1.set(message.id, message);
-        } else {
-          if (oldChunk2.size == 100) {
-            oldMessageChunks.push(oldChunk2);
-            oldChunk2.clear();
-          }
-
-          oldChunk2.set(message.id, message);
-        }
-      });
-
-      if (fetchedMessageCollection.size < 100) {
-        bulkDeletableMessageChunks.push(oldChunk1);
-        oldMessageChunks.push(oldChunk2);
-        messageCount += fetchedMessageCollection.size;
-        break;
-      }
-
-      messageCount += fetchedMessageCollection.size;
-      firstMessage = fetchedMessageCollection.last();
-
-      amount -= 100;
-    } while (amount > 0);
-
-    for (const chunk of bulkDeletableMessageChunks) {
-      await channel.bulkDelete(chunk);
+    for (let index = 0; index < bulkDeletableMessages.size; index += 100) {
+      await channel.bulkDelete(bulkDeletableMessages.toJSON().slice(index, index + 100));
     }
 
-    for (const chunk of oldMessageChunks) {
-      chunk.forEach((mesage) => channel.messages.delete(mesage));
+    for (const oldMessage of oldMessages.values()) {
+      if (oldMessage.deletable) await oldMessage.delete();
     }
 
-    sendTemporatyMessage(
-      message,
-      { content: `Deleted ${messageCount} message !` },
-      5000,
-    );
+    sendTemporatyMessage(message, { content: `Deleted ${messagesToDelete.size} message !` }, 5000);
 
     setTimeout(() => {
       if (message && message.deletable) message.delete();
@@ -324,8 +272,7 @@ export default class PrefixCommandHandler extends Handler {
    */
   async getListCommands(message) {
     await message.reply({
-      content:
-        "Available commands:\n- " + Object.keys(this.commands).join("\n- "),
+      content: "Available commands:\n- " + Object.keys(this.commands).join("\n- "),
     });
   }
 
@@ -334,9 +281,7 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Message<true>} message
    */
   async ping(message) {
-    await message.reply(
-      "Pong! Response time: " + (Date.now() - message.createdTimestamp) + "ms",
-    );
+    await message.reply("Pong! Response time: " + (Date.now() - message.createdTimestamp) + "ms");
   }
 
   /**
@@ -389,28 +334,19 @@ export default class PrefixCommandHandler extends Handler {
         if (level >= 999) return { main: t.vinhhangcanh };
         if (level >= 780) return { main: t.chuate };
 
-        if (level >= 695)
-          return { main: t.thienco.name, child: t.thienco.child.hauky };
-        if (level >= 620)
-          return { main: t.thienco.name, child: t.thienco.child.trungky };
-        if (level >= 545)
-          return { main: t.thienco.name, child: t.thienco.child.soky };
+        if (level >= 695) return { main: t.thienco.name, child: t.thienco.child.hauky };
+        if (level >= 620) return { main: t.thienco.name, child: t.thienco.child.trungky };
+        if (level >= 545) return { main: t.thienco.name, child: t.thienco.child.soky };
 
-        if (level >= 470)
-          return { main: t.thienton.name, child: t.thienton.child.hauky };
-        if (level >= 405)
-          return { main: t.thienton.name, child: t.thienton.child.trungky };
-        if (level >= 340)
-          return { main: t.thienton.name, child: t.thienton.child.soky };
+        if (level >= 470) return { main: t.thienton.name, child: t.thienton.child.hauky };
+        if (level >= 405) return { main: t.thienton.name, child: t.thienton.child.trungky };
+        if (level >= 340) return { main: t.thienton.name, child: t.thienton.child.soky };
 
         if (level >= 275) return { main: t.banthan };
 
-        if (level >= 220)
-          return { main: t.thiennhan.name, child: t.thiennhan.child.hauky };
-        if (level >= 175)
-          return { main: t.thiennhan.name, child: t.thiennhan.child.trungky };
-        if (level >= 130)
-          return { main: t.thiennhan.name, child: t.thiennhan.child.soky };
+        if (level >= 220) return { main: t.thiennhan.name, child: t.thiennhan.child.hauky };
+        if (level >= 175) return { main: t.thiennhan.name, child: t.thiennhan.child.trungky };
+        if (level >= 130) return { main: t.thiennhan.name, child: t.thiennhan.child.soky };
 
         if (level >= 85) return { main: t.nguyenanh };
         if (level >= 50) return { main: t.ketdan };
@@ -422,23 +358,16 @@ export default class PrefixCommandHandler extends Handler {
 
       let tutienState = getTutienState(res.level);
 
-      const totalExpOfCurrentLevel =
-        getTotalXpForLevel(res.level + 1) - getTotalXpForLevel(res.level);
-      const totalExpGainedOnCurrentLevel =
-        res.xp - getTotalXpForLevel(res.level);
-      const currentLevelProcessPercentage =
-        totalExpGainedOnCurrentLevel / totalExpOfCurrentLevel;
+      const totalExpOfCurrentLevel = getTotalXpForLevel(res.level + 1) - getTotalXpForLevel(res.level);
+      const totalExpGainedOnCurrentLevel = res.xp - getTotalXpForLevel(res.level);
+      const currentLevelProcessPercentage = totalExpGainedOnCurrentLevel / totalExpOfCurrentLevel;
       const green_square = ":green_square:";
       const white_large_square = ":white_large_square:";
-      const numberOfGreenSquare = Math.floor(
-        currentLevelProcessPercentage * 10,
-      );
+      const numberOfGreenSquare = Math.floor(currentLevelProcessPercentage * 10);
       const progressBar =
         res.level >= 999
           ? ":red_square:".repeat(10)
-          : `${green_square.repeat(numberOfGreenSquare)}${white_large_square.repeat(
-              10 - numberOfGreenSquare,
-            )}`;
+          : `${green_square.repeat(numberOfGreenSquare)}${white_large_square.repeat(10 - numberOfGreenSquare)}`;
 
       const firstCol = [
         ":bust_in_silhouette: **Cảnh giới:**",
@@ -451,21 +380,13 @@ export default class PrefixCommandHandler extends Handler {
       ];
 
       const secondCol = [
-        `*${tutienState.main}${tutienState.child ? ` ${tutienState.child} ` : ` `}(lv:${
-          res.level
-        })*`,
-        `${progressBar} *(${
-          res.level >= 999
-            ? "MAX"
-            : Math.floor(currentLevelProcessPercentage * 100) + "%"
-        })*`,
+        `*${tutienState.main}${tutienState.child ? ` ${tutienState.child} ` : ` `}(lv:${res.level})*`,
+        `${progressBar} *(${res.level >= 999 ? "MAX" : Math.floor(currentLevelProcessPercentage * 100) + "%"})*`,
         `*${res.message_count} 💬 sent*`,
         `${
           res.level >= 999
             ? "MAX"
-            : `*${Math.floor(
-                (totalExpOfCurrentLevel - totalExpGainedOnCurrentLevel) / 30,
-              )} messages*`
+            : `*${Math.floor((totalExpOfCurrentLevel - totalExpGainedOnCurrentLevel) / 30)} messages*`
         }`,
         "",
         "**Cấp độ**",
@@ -528,9 +449,7 @@ export default class PrefixCommandHandler extends Handler {
       },
     );
 
-    const messageAuthorData = await this.client.userService.getRankOrderByXp(
-      message.author.id,
-    );
+    const messageAuthorData = await this.client.userService.getRankOrderByXp(message.author.id);
 
     const convertedUserMessages = [];
     const convertedUserMessages2 = [];
@@ -538,9 +457,7 @@ export default class PrefixCommandHandler extends Handler {
     const convertedUserMessages3 = [];
 
     allUsers.forEach((userData, index) => {
-      convertedUserMessages.push(
-        `> **#${index + 1}${index < 10 ? "" : " "}** <@${userData.id}>`,
-      );
+      convertedUserMessages.push(`> **#${index + 1}${index < 10 ? "" : " "}** <@${userData.id}>`);
       convertedUserMessages2.push(`> \`${userData.level}\``);
       convertedUserMessages3.push(`> \`${userData.xp}\``);
     });
@@ -590,9 +507,7 @@ export default class PrefixCommandHandler extends Handler {
         );
       }
 
-      const plainText = `databaseTimestamp:${Date.now()}\n${convertedUserMessages.join(
-        "\n",
-      )}`;
+      const plainText = `databaseTimestamp:${Date.now()}\n${convertedUserMessages.join("\n")}`;
 
       if (channel && channel instanceof TextChannel) {
         const buffer = Buffer.from(plainText, "utf-8");
@@ -616,10 +531,7 @@ export default class PrefixCommandHandler extends Handler {
       return;
     }
 
-    if (
-      targetMessage.attachments.size == 0 &&
-      targetMessage.attachments.first().contentType !== "text/plain"
-    ) {
+    if (targetMessage.attachments.size == 0 && targetMessage.attachments.first().contentType !== "text/plain") {
       await message.reply("No attachment found or invalid attachment type.");
       return;
     }
@@ -700,12 +612,7 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async scanMember(message, args) {
-    if (
-      !(
-        message.member.permissions.has("ModerateMembers") ||
-        message.member.permissions.has("Administrator")
-      )
-    ) {
+    if (!(message.member.permissions.has("ModerateMembers") || message.member.permissions.has("Administrator"))) {
       await message.reply("You don't have permission to use this command !");
       return;
     }
@@ -719,20 +626,12 @@ export default class PrefixCommandHandler extends Handler {
 
     if (!channel || !(channel instanceof TextChannel)) return;
 
-    const kickButton = new ButtonBuilder()
-      .setLabel("kick")
-      .setStyle(ButtonStyle.Danger);
-    const deleteButton = new ButtonBuilder()
-      .setLabel("cancel")
-      .setCustomId("deletemsg")
-      .setStyle(ButtonStyle.Primary);
+    const kickButton = new ButtonBuilder().setLabel("kick").setStyle(ButtonStyle.Danger);
+    const deleteButton = new ButtonBuilder().setLabel("cancel").setCustomId("deletemsg").setStyle(ButtonStyle.Primary);
 
     for (const [id, member] of members) {
       kickButton.setCustomId(`kick-${id}`);
-      const actionRow = new ActionRowBuilder().addComponents([
-        kickButton,
-        deleteButton,
-      ]);
+      const actionRow = new ActionRowBuilder().addComponents([kickButton, deleteButton]);
 
       await channel.send({
         content: `User: ${member.user.globalName}/${member.id}: ${member.roles.cache.map((role) => (role.id == "811939594882777128" ? "" : role.name)).join(" | ")}`,
@@ -747,12 +646,7 @@ export default class PrefixCommandHandler extends Handler {
    * @param {Array<string>} args
    */
   async mute(message, args) {
-    if (
-      !(
-        message.member.permissions.has("ModerateMembers") ||
-        message.member.permissions.has("Administrator")
-      )
-    ) {
+    if (!(message.member.permissions.has("ModerateMembers") || message.member.permissions.has("Administrator"))) {
       await message.reply("You don't have permission to use this command !");
       return;
     }
@@ -773,24 +667,16 @@ export default class PrefixCommandHandler extends Handler {
     }
 
     if (args[2].endsWith("s")) {
-      message.channel.send(
-        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`,
-      );
+      message.channel.send(`${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`);
       await userTarget.timeout(parseInt(args[2]) * 1000, reason);
     } else if (args[2].endsWith("m")) {
-      message.channel.send(
-        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`,
-      );
+      message.channel.send(`${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`);
       await userTarget.timeout(parseInt(args[2]) * 60 * 1000, reason);
     } else if (args[2].endsWith("h")) {
-      message.channel.send(
-        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`,
-      );
+      message.channel.send(`${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`);
       await userTarget.timeout(parseInt(args[2]) * 60 * 60 * 1000, reason);
     } else if (args[2].endsWith("d")) {
-      message.channel.send(
-        `${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`,
-      );
+      message.channel.send(`${userTarget.user.username} muted for ${args[2]}, reason: ${reason}`);
       await userTarget.timeout(parseInt(args[2]) * 24 * 60 * 60 * 1000, reason);
     } else {
       await message.reply("Invalid time format !");
