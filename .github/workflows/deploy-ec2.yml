@@ -26,10 +26,13 @@ jobs:
 
           REPO="${{ github.repository }}"
           APP_DIR="\$HOME/bot"
+
           SERVICE_NAME="lvupbot"
           API_SERVICE_NAME="lvupbot-api"
+
           API_DIR="\$APP_DIR/python"
           API_VENV="\$API_DIR/.venv"
+
           PYTHON_VERSION="3.12.10"
 
           echo "========================================"
@@ -37,6 +40,11 @@ jobs:
           echo "========================================"
 
           echo "===== System ====="
+          echo "User: \$(whoami)"
+          echo "Node: \$(node --version 2>/dev/null || echo 'NOT INSTALLED')"
+          echo "NPM:  \$(npm --version 2>/dev/null || echo 'NOT INSTALLED')"
+          echo "Python 3.12: \$(python3.12 --version 2>/dev/null || echo 'NOT INSTALLED')"
+
           free -h
           df -h
 
@@ -51,38 +59,82 @@ jobs:
             sudo apt-get install -y git
           fi
 
-          # if ! command -v node >/dev/null 2>&1; then
-          #   echo "Installing Node.js 22..."
+          ############################################
+          # Check Node.js
+          ############################################
 
-          #   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-          #   sudo apt-get install -y nodejs
-          # fi
+          if ! command -v node >/dev/null 2>&1; then
+            echo "ERROR: Node.js is not installed."
+            exit 1
+          fi
+
+          if ! command -v npm >/dev/null 2>&1; then
+            echo "ERROR: npm is not installed."
+            exit 1
+          fi
 
           echo "Node: \$(node --version)"
           echo "NPM:  \$(npm --version)"
 
+          ############################################
+          # Python 3.12
+          ############################################
+
           if command -v python3.12 >/dev/null 2>&1; then
+
+            echo "Python 3.12 already installed."
+
             API_PYTHON="\$(command -v python3.12)"
+
           else
-            echo "Building Python \$PYTHON_VERSION with pyenv..."
+
+            echo "Python 3.12 not found."
+            echo "Installing with pyenv..."
+
             sudo apt-get update
+
             sudo apt-get install -y \
-              build-essential curl libbz2-dev libffi-dev liblzma-dev \
-              libncurses-dev libreadline-dev libsqlite3-dev libssl-dev \
-              tk-dev xz-utils zlib1g-dev
+              build-essential \
+              curl \
+              git \
+              libbz2-dev \
+              libffi-dev \
+              liblzma-dev \
+              libncurses-dev \
+              libreadline-dev \
+              libsqlite3-dev \
+              libssl-dev \
+              tk-dev \
+              xz-utils \
+              zlib1g-dev
 
             export PYENV_ROOT="\$HOME/.pyenv"
-            export PATH="\$PYENV_ROOT/bin:\$PATH"
+            export PATH="\$PYENV_ROOT/bin:\$PYENV_ROOT/shims:\$PATH"
 
             if [ ! -x "\$PYENV_ROOT/bin/pyenv" ]; then
+              echo "Installing pyenv..."
+
               curl https://pyenv.run | bash
             fi
 
             export PATH="\$PYENV_ROOT/bin:\$PYENV_ROOT/shims:\$PATH"
+
             eval "\$(pyenv init -)"
-            pyenv install -s "\$PYTHON_VERSION"
+
+            if ! pyenv versions --bare | grep -qx "\$PYTHON_VERSION"; then
+
+              echo "Building Python \$PYTHON_VERSION..."
+
+              pyenv install "\$PYTHON_VERSION"
+
+            fi
+
             API_PYTHON="\$PYENV_ROOT/versions/\$PYTHON_VERSION/bin/python"
+
           fi
+
+          echo "Using Python:"
+          "\$API_PYTHON" --version
 
           ############################################
           # Clone / Update repository
@@ -94,7 +146,7 @@ jobs:
 
             cd "\$APP_DIR"
 
-            git fetch origin
+            git fetch origin master
             git reset --hard origin/master
             git clean -fd
 
@@ -113,12 +165,44 @@ jobs:
           fi
 
           ############################################
+          # Verify project
+          ############################################
+
+          echo "===== Project ====="
+
+          test -f "\$APP_DIR/index.js" || {
+            echo "ERROR: index.js not found."
+            exit 1
+          }
+
+          test -f "\$APP_DIR/package.json" || {
+            echo "ERROR: package.json not found."
+            exit 1
+          }
+
+          test -d "\$API_DIR" || {
+            echo "ERROR: Python API directory not found:"
+            echo "\$API_DIR"
+            exit 1
+          }
+
+          test -f "\$API_DIR/main.py" || {
+            echo "ERROR: main.py not found."
+            exit 1
+          }
+
+          test -f "\$API_DIR/requirements.txt" || {
+            echo "ERROR: requirements.txt not found."
+            exit 1
+          }
+
+          ############################################
           # Create .env
           ############################################
 
           echo "Creating environment..."
 
-          cat > .env <<ENV
+          cat > "\$APP_DIR/.env" <<ENV
           TOKEN=${{ secrets.TOKEN }}
           DB_HOST=${{ secrets.DB_HOST }}
           DB_USER=${{ secrets.DB_USER }}
@@ -127,60 +211,109 @@ jobs:
           DB_PORT=3306
           ENV
 
-          ############################################
-          # Install dependencies
-          ############################################
-
-          echo "Installing dependencies..."
-
-          npm i
-
-          echo "Installing API dependencies..."
-
-          "\$API_PYTHON" -m venv "\$API_VENV"
-          "\$API_VENV/bin/pip" install --upgrade pip
-          "\$API_VENV/bin/pip" install -r "\$API_DIR/requirements.txt"
+          chmod 600 "\$APP_DIR/.env"
 
           ############################################
-          # Create systemd service
+          # Node dependencies
           ############################################
 
-          echo "Creating systemd service..."
+          echo "Installing Node dependencies..."
 
-          sudo tee /etc/systemd/system/\$SERVICE_NAME.service > /dev/null <<SERVICE
+          cd "\$APP_DIR"
+
+          if [ -f package-lock.json ]; then
+
+            echo "Using npm ci..."
+
+            npm ci --omit=dev
+
+          else
+
+            echo "WARNING: package-lock.json not found."
+            echo "Using npm install..."
+
+            npm install --omit=dev
+
+          fi
+
+          ############################################
+          # Python virtual environment
+          ############################################
+
+          echo "Setting up Python virtual environment..."
+
+          if [ ! -x "\$API_VENV/bin/python" ]; then
+
+            echo "Creating virtual environment..."
+
+            "\$API_PYTHON" -m venv "\$API_VENV"
+
+          fi
+
+          echo "Installing Python dependencies..."
+
+          "\$API_VENV/bin/python" -m pip install \
+            --disable-pip-version-check \
+            --no-cache-dir \
+            --upgrade pip
+
+          "\$API_VENV/bin/python" -m pip install \
+            --disable-pip-version-check \
+            --no-cache-dir \
+            -r "\$API_DIR/requirements.txt"
+
+          ############################################
+          # Create Node.js systemd service
+          ############################################
+
+          echo "Creating Node.js service..."
+
+          sudo tee "/etc/systemd/system/\$SERVICE_NAME.service" > /dev/null <<SERVICE
+
           [Unit]
           Description=LVUP Discord Bot
-          After=network.target
+          After=network-online.target mysql.service
+          Wants=network-online.target
 
           [Service]
           Type=simple
 
           User=${{ secrets.EC2_USER }}
+
           WorkingDirectory=\$APP_DIR
 
           Environment=NODE_ENV=production
+
+          Environment=NODE_OPTIONS=--max-old-space-size=384
 
           ExecStart=/usr/bin/node \$APP_DIR/index.js
 
           Restart=always
           RestartSec=5
 
-          # Prevent Node.js from consuming all RAM
-          Environment=NODE_OPTIONS=--max-old-space-size=384
-
           [Install]
           WantedBy=multi-user.target
+
           SERVICE
 
-          sudo tee /etc/systemd/system/\$API_SERVICE_NAME.service > /dev/null <<SERVICE
+          ############################################
+          # Create Python API systemd service
+          ############################################
+
+          echo "Creating Python API service..."
+
+          sudo tee "/etc/systemd/system/\$API_SERVICE_NAME.service" > /dev/null <<SERVICE
+
           [Unit]
-          Description=LVUP Facebed API Server
-          After=network.target
+          Description=LVUP Python API Server
+          After=network-online.target mysql.service
+          Wants=network-online.target
 
           [Service]
           Type=simple
 
           User=${{ secrets.EC2_USER }}
+
           WorkingDirectory=\$API_DIR
 
           Environment=PYTHONUNBUFFERED=1
@@ -192,68 +325,101 @@ jobs:
 
           [Install]
           WantedBy=multi-user.target
+
           SERVICE
 
           ############################################
-          # Restart service
+          # Reload systemd
           ############################################
 
           sudo systemctl daemon-reload
-          sudo systemctl enable \$SERVICE_NAME
-          sudo systemctl enable \$API_SERVICE_NAME
-          sudo systemctl restart \$SERVICE_NAME
-          sudo systemctl restart \$API_SERVICE_NAME
+
+          sudo systemctl enable "\$SERVICE_NAME"
+          sudo systemctl enable "\$API_SERVICE_NAME"
 
           ############################################
-          # Wait for application
+          # Restart applications
           ############################################
 
-          sleep 3
+          echo "Restarting applications..."
+
+          sudo systemctl restart "\$SERVICE_NAME"
+          sudo systemctl restart "\$API_SERVICE_NAME"
 
           ############################################
-          # Check application
+          # Wait
           ############################################
 
-           if sudo systemctl is-active --quiet \$SERVICE_NAME && \
-             sudo systemctl is-active --quiet \$API_SERVICE_NAME; then
+          sleep 5
+
+          ############################################
+          # Check Node service
+          ############################################
+
+          if ! sudo systemctl is-active --quiet "\$SERVICE_NAME"; then
 
             echo "========================================"
-            echo "       DEPLOYMENT SUCCESSFUL"
-            echo "========================================"
-
-          else
-
-            echo "========================================"
-            echo "       DEPLOYMENT FAILED"
+            echo "      DISCORD BOT FAILED"
             echo "========================================"
 
             sudo systemctl status \
-              \$SERVICE_NAME \
-              \$API_SERVICE_NAME \
-              --no-pager
+              "\$SERVICE_NAME" \
+              --no-pager \
+              || true
 
-            echo "===== Logs ====="
+            echo "===== Discord Bot Logs ====="
 
             sudo journalctl \
-              -u \$SERVICE_NAME \
-              -u \$API_SERVICE_NAME \
+              -u "\$SERVICE_NAME" \
               -n 100 \
-              --no-pager
+              --no-pager \
+              || true
 
             exit 1
 
           fi
 
           ############################################
-          # Status
+          # Check API service
           ############################################
 
-          echo "===== Service ====="
+          if ! sudo systemctl is-active --quiet "\$API_SERVICE_NAME"; then
 
-          sudo systemctl status \
-            \$SERVICE_NAME \
-            \$API_SERVICE_NAME \
-            --no-pager
+            echo "========================================"
+            echo "       PYTHON API FAILED"
+            echo "========================================"
+
+            sudo systemctl status \
+              "\$API_SERVICE_NAME" \
+              --no-pager \
+              || true
+
+            echo "===== Python API Logs ====="
+
+            sudo journalctl \
+              -u "\$API_SERVICE_NAME" \
+              -n 100 \
+              --no-pager \
+              || true
+
+            exit 1
+
+          fi
+
+          ############################################
+          # Successful deployment
+          ############################################
+
+          echo "========================================"
+          echo "       DEPLOYMENT SUCCESSFUL"
+          echo "========================================"
+
+          echo "===== Services ====="
+
+          sudo systemctl --no-pager --type=service \
+            --state=running \
+            | grep -E "\$SERVICE_NAME|\$API_SERVICE_NAME" \
+            || true
 
           echo "===== Memory ====="
 
