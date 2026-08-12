@@ -49,10 +49,7 @@ export default class NoichuHandler extends Handler {
 
       message.content = message.content.toLowerCase();
 
-      if (
-        message.content.startsWith("reset") &&
-        message.author.id == "866628870123552798"
-      ) {
+      if (message.content.startsWith("reset") && message.author.id == "866628870123552798") {
         await message.reply({ content: "Game reset !" });
         this.lastPlayedTimeInfo = {
           userId: undefined,
@@ -70,15 +67,11 @@ export default class NoichuHandler extends Handler {
         } else {
           const path = this.lastPlayedTimeInfo.lastWord.split(" ");
           const suggestWordlist = Object.keys(dictionary[path[path.length - 1]]).filter(
-            (value) =>
-              !this.usedWordlist.find((value1) => value == value1) &&
-              value.split(" ").length > 1
+            (value) => !this.usedWordlist.find((value1) => value == value1) && value.split(" ").length > 1,
           );
 
           if (suggestWordlist.length == 0) {
-            const embed = new EmbedBuilder()
-              .setTitle(`Đã hết gợi ý, làm mới !`)
-              .setColor(`#fff700`);
+            const embed = new EmbedBuilder().setTitle(`Đã hết gợi ý, làm mới !`).setColor(`#fff700`);
             const replyMessage = await message.reply({ embeds: [embed] });
 
             setTimeout(() => {
@@ -98,9 +91,7 @@ export default class NoichuHandler extends Handler {
             embeds: [
               new EmbedBuilder()
                 .setColor(Colors.Green)
-                .setTitle(
-                  `Gợi ý: ${suggestWordlist[getRandomInt(0, suggestWordlist.length - 1)]}`
-                ),
+                .setTitle(`Gợi ý: ${suggestWordlist[getRandomInt(0, suggestWordlist.length - 1)]}`),
             ],
           });
 
@@ -138,9 +129,7 @@ export default class NoichuHandler extends Handler {
 
       if (state && this.lastPlayedTimeInfo.lastWord) {
         const lastWord_lastChar =
-          this.lastPlayedTimeInfo.lastWord.split(" ")[
-            this.lastPlayedTimeInfo.lastWord.split(" ").length - 1
-          ];
+          this.lastPlayedTimeInfo.lastWord.split(" ")[this.lastPlayedTimeInfo.lastWord.split(" ").length - 1];
 
         if (path.at(0) != lastWord_lastChar) {
           replyMessageContent = `Bạn phải bắt đầu bằng từ: ${lastWord_lastChar}`;
@@ -167,7 +156,10 @@ export default class NoichuHandler extends Handler {
       }
 
       if (state) {
-        await message.react("✅");
+        let isBlocked = false;
+        await message.react("✅").catch((error) => (isBlocked = error.code == 403));
+
+        if (isBlocked) return;
         this.lastPlayedTimeInfo.userId = message.author.id;
         this.lastPlayedTimeInfo.lastWord = message.content;
         this.usedWordlist.push(message.content);
@@ -181,18 +173,12 @@ export default class NoichuHandler extends Handler {
         }
 
         const remainList = keyList.filter(
-          (value) =>
-            !this.usedWordlist.find((value1) => value == value1) &&
-            value.split(" ").length > 1
+          (value) => !this.usedWordlist.find((value1) => value == value1) && value.split(" ").length > 1,
         );
 
         if (remainList.length == 0) {
           message.channel.send({
-            embeds: [
-              new EmbedBuilder()
-                .setTitle(`Không còn từ khả dụng, làm mới !`)
-                .setColor(Colors.Blurple),
-            ],
+            embeds: [new EmbedBuilder().setTitle(`Không còn từ khả dụng, làm mới !`).setColor(Colors.Blurple)],
           });
 
           this.lastPlayedTimeInfo.lastWord = undefined;
@@ -202,14 +188,12 @@ export default class NoichuHandler extends Handler {
         await message.react("❌");
         message
           .reply({
-            embeds: [
-              new EmbedBuilder().setTitle(replyMessageContent).setColor(`#fff700`),
-            ],
+            embeds: [new EmbedBuilder().setTitle(replyMessageContent).setColor(`#fff700`)],
           })
           .then((replyMessage) =>
             setTimeout(() => {
               replyMessage.deletable ? replyMessage.delete() : undefined;
-            }, 5000)
+            }, 5000),
           );
         return;
       }
