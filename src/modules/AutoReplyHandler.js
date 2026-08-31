@@ -356,6 +356,14 @@ export default class AutoReplyHandler extends Handler {
    */
   async processSpaming(message) {
     if (message.channel.id == "1543589411147751464") {
+      if (message.author.bot) return;
+      const botMember = await message.guild.members.fetch(this.client.user.id);
+
+      if (!botMember) return;
+      if (message.member.roles.highest.comparePositionTo(botMember.roles.highest) >= 0) {
+        return;
+      }
+
       try {
         await message.author.send({
           content:
