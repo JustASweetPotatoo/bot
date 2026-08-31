@@ -100,8 +100,13 @@ export default class AutoReplyHandler extends Handler {
       content: [
         {
           replyUser: false,
+          replyMentioned: true,
+          content: "mẹ mày béo !",
+        },
+        {
+          replyUser: false,
           replyMentioned: false,
-          content: "mẹ mày béo !\n# <:capoo_sleep:1277690970531561595>",
+          content: "https://cdn.discordapp.com/emojis/1535654117890854984.webp?size=48",
         },
       ],
     },
@@ -155,7 +160,9 @@ export default class AutoReplyHandler extends Handler {
   async getFacebookMedia(message) {
     const extractedLinks = message.content.match(/https?:\/\/[^\s]+/g);
     if (!extractedLinks) return undefined;
-    const facebookLinks = extractedLinks.filter((url) => url.startsWith("https://www.facebook.com"));
+    const facebookLinks = extractedLinks.filter((url) =>
+      url.startsWith("https://www.facebook.com"),
+    );
     let firstLink = facebookLinks.at(0);
     if (firstLink) return undefined;
     firstLink = firstLink.replace("https://www.facebook.com", PYTHON_API);
@@ -200,7 +207,7 @@ export default class AutoReplyHandler extends Handler {
   lnk(message, toAPI = true) {
     const urls = message.content.match(/https?:\/\/[^\s]+/g);
     if (!urls) return undefined;
-    const fbUrls = urls.filter((url) => url.startsWith("https://www.facebook.com/share/r/"));
+    const fbUrls = urls.filter((url) => url.startsWith("https://www.facebook.com"));
     let firstUrl = fbUrls.at(0);
 
     if (!firstUrl) return firstUrl;
@@ -240,9 +247,13 @@ export default class AutoReplyHandler extends Handler {
       const html = await response.text();
       const postData = parsePost(html);
       const messageRef = message.reference;
-      const refMessage = messageRef ? await message.channel.fetch(messageRef.messageId) : undefined;
+      const col = messageRef
+        ? await message.channel.messages.fetch(messageRef.messageId)
+        : undefined;
+
+      const refMessage = col instanceof Collection ? col.at(0) : col;
       let msg;
-      const webhookClient = await this.getWebhook(message.channel);
+      const webhookClient = this.getWebhook(message.channel);
 
       if (postData.videoLink) {
         const videoCacheLink = cache[postData.reelId];
@@ -275,7 +286,9 @@ export default class AutoReplyHandler extends Handler {
           const messagePayload = {
             content:
               `${wrapLinks(message.content)}\n> -# ${findFBUrl(message.content)}` +
-              (refMessage ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)` : ""),
+              (refMessage
+                ? `\n> -# ↪ [Reply to ↗ ${refMessage.author.displayName}](<${refMessage.url}>)`
+                : ""),
             embeds: [founderEmbed],
             username: message.author.displayName,
             avatarURL: message.author.avatarURL(),
@@ -290,7 +303,9 @@ export default class AutoReplyHandler extends Handler {
           const messagePayload = {
             content:
               `${wrapLinks(message.content)}` +
-              (refMessage ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)` : ""),
+              (refMessage
+                ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
+                : ""),
             files: [path],
             embeds: [founderEmbed],
             username: message.author.displayName,
@@ -314,7 +329,9 @@ export default class AutoReplyHandler extends Handler {
           content:
             wrapLinks(message.content) +
             postEmbedDescription +
-            (refMessage ? `s\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)` : ""),
+            (refMessage
+              ? `s\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
+              : ""),
           files: [postData.imageLink],
           embeds: [founderEmbed],
           username: message.author.displayName,
@@ -337,15 +354,42 @@ export default class AutoReplyHandler extends Handler {
    *
    * @param {Message<true>} message
    */
+  async processSpaming(message) {
+    if (message.channel.id == "1543589411147751464") {
+      try {
+        await message.author.send({
+          content:
+            "## You have been kicked out of server Thiên Hà Của Sứa with reason: Spaming\n`Notification: You can join again after 12 hours`",
+        });
+
+        await message.member.ban({ deleteMessageSeconds: 60 * 60, reason: "spaming" });
+      } catch (error) {
+        this.client.logger.writeLog(error);
+      }
+
+      setTimeout(
+        () => message.member.guild.bans.remove().catch((error) => this.logger.writeLog(error)),
+        1000 * 60 * 60 * 12,
+      );
+    }
+  }
+
+  /**
+   *
+   * @param {Message<true>} message
+   */
   onMessage = async (message) => {
     try {
+      this.processSpaming(message);
       if (message.author.bot) return;
       if (message.content.startsWith(">")) return;
 
       this.processFacebookUrl(message);
 
       const autoReplyItem = this.autoReplyData.find((value) =>
-        value.wildcard ? message.content.includes(value.match) : message.content.startsWith(value.match),
+        value.wildcard
+          ? message.content.includes(value.match)
+          : message.content.startsWith(value.match),
       );
 
       if (!autoReplyItem) return;
@@ -355,7 +399,11 @@ export default class AutoReplyHandler extends Handler {
         let mentionText = undefined;
         let mentionedUser = message.mentions.users.first();
 
-        if (autoReplyItem.match == "mmb" && mentionedUser && mentionedUser.id == "866628870123552798") {
+        if (
+          autoReplyItem.match == "mmb" &&
+          mentionedUser &&
+          mentionedUser.id == "866628870123552798"
+        ) {
           return;
         }
 
