@@ -186,7 +186,7 @@ export default class AutoReplyHandler extends Handler {
   /**
    *
    * @param {TextChannel | VoiceChannel | ThreadChannel} channel
-   * @returns {WebhookClient}
+   * @returns {Promise<WebhookClient>}
    */
   async getWebhook(channel) {
     let webhookClient;
@@ -253,7 +253,7 @@ export default class AutoReplyHandler extends Handler {
 
       const refMessage = col instanceof Collection ? col.at(0) : col;
       let msg;
-      const webhookClient = this.getWebhook(message.channel);
+      const webhookClient = await this.getWebhook(message.channel);
 
       if (postData.videoLink) {
         const videoCacheLink = cache[postData.reelId];
