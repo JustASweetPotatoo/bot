@@ -290,7 +290,7 @@ export default class AutoReplyHandler extends Handler {
                 ? `\n> -# ↪ [Reply to ↗ ${refMessage.author.displayName}](<${refMessage.url}>)`
                 : ""),
             embeds: [founderEmbed],
-            username: message.author.displayName,
+            username: message.author?.displayName ?? message.member.displayName,
             avatarURL: message.author.avatarURL(),
           };
 
