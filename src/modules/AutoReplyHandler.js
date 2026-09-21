@@ -227,7 +227,7 @@ export default class AutoReplyHandler extends Handler {
       if (!facebookUrl) return;
 
       const founderEmbed = {
-        description: `> *Sứa#2120 - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
+        description: `> *BetterLink - Powered by **Potarozz***\n> *Facebed API by **pi.kt***`,
         color: Colors.Blurple,
         footer: { text: `UID: ${message.author.id}` },
         timestamp: new Date(),
@@ -240,7 +240,7 @@ export default class AutoReplyHandler extends Handler {
           .setTitle("This post is private or unavailable !")
           .setDescription(`[See posts, photos and more on Facebook](<${this.lnk(message, false)}>)`)
           .setColor(Colors.Yellow);
-        await message.reply({ embeds: [warnEmbed, founderEmbed] });
+        await message.reply({ embeds: [warnEmbed] }).catch((error) => undefined);
         return;
       }
 
@@ -256,19 +256,6 @@ export default class AutoReplyHandler extends Handler {
       const webhookClient = await this.getWebhook(message.channel);
 
       if (postData.videoLink) {
-        const videoCacheLink = cache[postData.reelId];
-        if (videoCacheLink) {
-          await webhookClient.send({
-            content: wrapLinks(message.content) + `\n${cache[postData.reelId]}`,
-            embeds: [founderEmbed],
-            username: message.author.displayName,
-            avatarURL: message.author.avatarURL(),
-            threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
-          });
-
-          await message.delete();
-          return;
-        }
         const path = await downloadVideo(postData.videoLink, `${postData.reelId}.mp4`);
 
         if (!path) {
@@ -276,7 +263,7 @@ export default class AutoReplyHandler extends Handler {
             .setTitle("This post is private or unavailable !")
             .setDescription(`[See post or photos and more on Facebook](<${facebookUrl}>)`)
             .setColor(Colors.Yellow);
-          await message.reply({ embeds: [embed, founderEmbed] });
+          await message.reply({ embeds: [embed] });
           return;
         }
 
@@ -285,11 +272,10 @@ export default class AutoReplyHandler extends Handler {
         if (videoStats.size >= 10 * 1024 * 1024) {
           const messagePayload = {
             content:
-              `${wrapLinks(message.content)}\n> -# ${findFBUrl(message.content)}` +
+              `${wrapLinks(message.content)}\n> -# ${findFBUrl(message.content).replace("facebook", "facebed")}` +
               (refMessage
                 ? `\n> -# ↪ [Reply to ↗ ${refMessage.author.displayName}](<${refMessage.url}>)`
                 : ""),
-            embeds: [founderEmbed],
             username: message.author?.displayName ?? message.member.displayName,
             avatarURL: message.author.avatarURL(),
           };
@@ -343,7 +329,11 @@ export default class AutoReplyHandler extends Handler {
           .setTitle("This post is private or unavailable !")
           .setDescription(`[See posts, photos and more on Facebook](<${facebookUrl}>)`)
           .setColor(Colors.Yellow);
-        await message.reply({ embeds: [embed, founderEmbed] });
+        const message = await message.reply({ embeds: [embed] });
+
+        setTimeout(() => {
+          message.delete().catch((error) => undefined);
+        }, 10000);
       }
     } catch (error) {
       this.client.logger.writeLog(error);
