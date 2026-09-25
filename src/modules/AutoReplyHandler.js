@@ -207,12 +207,19 @@ export default class AutoReplyHandler extends Handler {
   lnk(message, toAPI = true) {
     const urls = message.content.match(/https?:\/\/[^\s]+/g);
     if (!urls) return undefined;
-    const fbUrls = urls.filter((url) => url.startsWith("https://www.facebook.com"));
+    const fbUrls = urls.filter(
+      (url) =>
+        url.startsWith("https://www.facebook.com") || url.startsWith("https://www.facebed.com"),
+    );
     let firstUrl = fbUrls.at(0);
 
     if (!firstUrl) return firstUrl;
 
-    if (toAPI) return firstUrl.replace("https://www.facebook.com", PYTHON_API);
+    if (toAPI) {
+      return firstUrl
+        .replace("https://www.facebook.com", PYTHON_API)
+        .replace("https://www.facebed.com", PYTHON_API);
+    }
     return firstUrl.replace("https://www.facebook.com", "https://www.facebed.com");
   }
 
