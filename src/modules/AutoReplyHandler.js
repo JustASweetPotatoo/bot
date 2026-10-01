@@ -404,17 +404,12 @@ export default class AutoReplyHandler extends Handler {
         let mentionText = undefined;
         let mentionedUser = message.mentions.users.first();
 
-        if (
-          autoReplyItem.match == "mmb" &&
-          mentionedUser &&
-          mentionedUser.id == "866628870123552798"
-        ) {
+        if (mentionedUser.id == "866628870123552798") {
           return;
         }
 
-        if (content.replyMentioned) {
-          if (!mentionedUser) return;
-          mentionText = `<@${mentionedUser.id}>`;
+        if (content.replyMentioned && mentionedUser) {
+          mentionText = `<@${mentionedUser.id}> `;
         }
 
         sendText = `${mentionText ? `\n${mentionText}` : ""}${content.content}`;
