@@ -15,6 +15,7 @@ import fs from "fs";
 import { pipeline } from "stream/promises";
 import { configDotenv } from "dotenv";
 import * as cheerio from "cheerio";
+import { estimateVideoSize, parseFacebookVideoUrl } from "../utils/utils.js";
 
 configDotenv();
 const PYTHON_API = process.env.PYTHON_API || "http://localhost:9812";
@@ -202,25 +203,28 @@ export default class AutoReplyHandler extends Handler {
   /**
    * @param {Message<true>} message
    * @param {boolean} [toAPI=true]
-   * @returns {string | undefined}
+   * @returns {[string, string] | [undefined, undefined]}
    */
   lnk(message, toAPI = true) {
     const urls = message.content.match(/https?:\/\/[^\s]+/g);
-    if (!urls) return undefined;
+    if (!urls) return [undefined, undefined];
     const fbUrls = urls.filter(
       (url) =>
         url.startsWith("https://www.facebook.com") || url.startsWith("https://www.facebed.com"),
     );
     let firstUrl = fbUrls.at(0);
 
-    if (!firstUrl) return firstUrl;
+    if (!firstUrl) return [firstUrl, undefined];
 
     if (toAPI) {
-      return firstUrl
-        .replace("https://www.facebook.com", PYTHON_API)
-        .replace("https://www.facebed.com", PYTHON_API);
+      return [
+        firstUrl,
+        firstUrl
+          .replace("https://www.facebook.com", PYTHON_API)
+          .replace("https://www.facebed.com", PYTHON_API),
+      ];
     }
-    return firstUrl.replace("https://www.facebook.com", "https://www.facebed.com");
+    return [firstUrl, firstUrl.replace("https://www.facebook.com", "https://www.facebed.com")];
   }
 
   /**
@@ -230,7 +234,7 @@ export default class AutoReplyHandler extends Handler {
   async processFacebookUrl(message) {
     try {
       if (!message.inGuild() || message.author.bot) return;
-      const facebookUrl = this.lnk(message);
+      const [originalUrl, facebookUrl] = this.lnk(message);
       if (!facebookUrl) return;
 
       const founderEmbed = {
@@ -263,26 +267,23 @@ export default class AutoReplyHandler extends Handler {
       const webhookClient = await this.getWebhook(message.channel);
 
       if (postData.videoLink) {
-        const path = await downloadVideo(postData.videoLink, `${postData.reelId}.mp4`);
+        const parsedVideoData = parseFacebookVideoUrl(postData.videoLink);
+        const isTooLargeContent = estimateVideoSize(parsedVideoData).estimatedWithErrorMB > 10;
 
-        if (!path) {
-          const embed = new EmbedBuilder()
-            .setTitle("This post is private or unavailable !")
-            .setDescription(`[See post or photos and more on Facebook](<${facebookUrl}>)`)
-            .setColor(Colors.Yellow);
-          await message.reply({ embeds: [embed] });
-          return;
-        }
-
-        const videoStats = fs.statSync(path);
-
-        if (videoStats.size >= 10 * 1024 * 1024) {
+        if (isTooLargeContent) {
           const messagePayload = {
             content:
               `${wrapLinks(message.content)}\n> -# ${findFBUrl(message.content).replace("facebook", "facebed")}` +
               (refMessage
                 ? `\n> -# ↪ [Reply to ↗ ${refMessage.author.displayName}](<${refMessage.url}>)`
                 : ""),
+            embeds: [
+              new EmbedBuilder({
+                description: `> [${postData.title}](${wrapLinks(facebookUrl)})\n> -# ${postData.description ?? "No description"}`,
+                colors: Colors.Blurple,
+                video: postData.videoLink,
+              }),
+            ],
             username: message.author?.displayName ?? message.member.displayName,
             avatarURL: message.author.avatarURL(),
           };
@@ -291,8 +292,20 @@ export default class AutoReplyHandler extends Handler {
             ...messagePayload,
             threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
           });
-          cache[postData.reelId] = postData.videoLink;
+
+          return;
         } else {
+          const path = await downloadVideo(postData.videoLink, `${postData.reelId}.mp4`);
+
+          if (!path) {
+            const embed = new EmbedBuilder()
+              .setTitle("This post is private or unavailable !")
+              .setDescription(`[See post or photos and more on Facebook](<${facebookUrl}>)`)
+              .setColor(Colors.Yellow);
+            await message.reply({ embeds: [embed] });
+            return;
+          }
+
           const messagePayload = {
             content:
               `${wrapLinks(message.content)}` +
@@ -388,6 +401,8 @@ export default class AutoReplyHandler extends Handler {
       this.processSpaming(message);
       if (message.author.bot) return;
       if (message.content.startsWith(">")) return;
+
+      this.client.userJoinHandler.createMessage(message);
 
       this.processFacebookUrl(message);
 

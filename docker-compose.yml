@@ -31,6 +31,20 @@ services:
       retries: 10
       start_period: 30s
 
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   python:
     build: ./python
     container_name: py-server
@@ -50,6 +64,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       python:
         condition: service_started
 
@@ -62,7 +78,11 @@ services:
       DB_PASS: bot123
       DB_NAME: bot
 
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
       PYTHON_API: http://python:9812
 
 volumes:
   mysql_data:
+  redis_data:

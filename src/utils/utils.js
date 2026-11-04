@@ -74,13 +74,7 @@ export async function generateRankCard({
   ctx.closePath();
   ctx.clip();
 
-  ctx.drawImage(
-    avatar,
-    avatarX - avatarSize / 2,
-    avatarY - avatarSize / 2,
-    avatarSize,
-    avatarSize
-  );
+  ctx.drawImage(avatar, avatarX - avatarSize / 2, avatarY - avatarSize / 2, avatarSize, avatarSize);
 
   ctx.restore();
 
@@ -178,6 +172,105 @@ export async function generateRankCard({
   ctx.restore();
 
   return canvas.toBuffer("image/png");
+}
+
+export function parseFacebookVideoUrl(videoUrl) {
+  const url = new URL(videoUrl);
+
+  const params = Object.fromEntries(url.searchParams.entries());
+
+  let metadata = {};
+
+  // Parse metadata được Facebook encode trong `efg`
+  if (params.efg) {
+    try {
+      const decoded = Buffer.from(params.efg, "base64").toString("utf8");
+      metadata = JSON.parse(decoded);
+    } catch {
+      // efg không phải JSON hợp lệ
+    }
+  }
+
+  // Parse resolution từ tag
+  let width;
+  let height;
+
+  const resolutionMatch = params.tag?.match(/_(\d+)p(?:$|_)/);
+
+  if (resolutionMatch) {
+    height = Number(resolutionMatch[1]);
+  }
+
+  return {
+    url: videoUrl,
+
+    // URL information
+    hostname: url.hostname,
+    pathname: url.pathname,
+
+    // Video information
+    duration: metadata.duration_s,
+    durationFormatted: metadata.duration_s ? formatDuration(metadata.duration_s) : undefined,
+
+    bitrate: params.bitrate ? Number(params.bitrate) : undefined,
+
+    bitrateKbps: params.bitrate ? Math.round(Number(params.bitrate) / 1000) : undefined,
+
+    width,
+    height,
+
+    resolution: height ? `${height}p` : undefined,
+
+    codec: metadata.vencode_tag?.match(/(h264|h265|hevc|av1)/i)?.[1],
+
+    assetId: metadata.xpv_asset_id,
+
+    tag: params.tag,
+
+    // Facebook parameters
+    ncCat: params._nc_cat,
+    ncSid: params._nc_sid,
+    ncHt: params._nc_ht,
+    ncOhc: params._nc_ohc,
+    vs: params.vs,
+    oe: params.oe,
+  };
+}
+
+function formatDuration(seconds) {
+  seconds = Math.floor(seconds);
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  return `${minutes}:${String(secs).padStart(2, "0")}`;
+}
+
+export function estimateVideoSize({ duration, bitrate, maxSizeMB = 50, errorRate = 0.15 }) {
+  if (!duration || !bitrate) {
+    return {
+      valid: false,
+      estimatedMB: null,
+      estimatedWithErrorMB: null,
+    };
+  }
+
+  const estimatedBytes = (bitrate * duration) / 8;
+  const estimatedWithErrorBytes = estimatedBytes * (1 + errorRate);
+  const maxBytes = maxSizeMB * 1024 * 1024;
+
+  return {
+    valid: estimatedWithErrorBytes <= maxBytes,
+    estimatedMB: estimatedBytes / 1024 / 1024,
+    estimatedWithErrorMB: estimatedWithErrorBytes / 1024 / 1024,
+    maxSizeMB,
+    errorRate,
+  };
 }
 
 export default generateRankCard;

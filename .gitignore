@@ -9,3 +9,5 @@ debug.js
 *.sql
 *.mp4
 output.txt
+*.test.*
+test.*
