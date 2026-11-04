@@ -60,7 +60,7 @@ export default class UserJoinHandler extends Handler {
 
     this.guild = this.client.guilds.cache.get(GUILD_ID);
     this.kickTime = SESSION_TTL_SECONDS * 1000;
-    this.intervalTimer = 1000 * 6;
+    this.intervalTimer = 1000 * 60 * 60 * 1;
     this.systemIntervalRunning = false;
     this.kickPermissionWarningLogged = false;
 
