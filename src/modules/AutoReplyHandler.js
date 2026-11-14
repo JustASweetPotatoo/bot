@@ -28,23 +28,11 @@ const PYTHON_API = process.env.PYTHON_API || "http://localhost:9812";
 function findFBUrl(content) {
   const urls = content.match(/https?:\/\/[^\s]+/g);
   if (!urls) return undefined;
-  const fbUrls = urls.filter((url) => url.startsWith("https://www.facebook.com/share/v/"));
+  const fbUrls = urls.filter(
+    (url) =>
+      url.startsWith("https://www.facebook.com") || url.startsWith("https://www.facebed.com"),
+  );
   return fbUrls.at(0);
-}
-
-/**
- *
- * @param {Message<true>} message
- */
-async function linkConvert(message) {
-  const url = findFBUrl(message.content);
-  if (!url) return;
-  return url.replace("https://www.facebook.com", PYTHON_API);
-}
-
-function trimEmbed(text, max = 4096) {
-  if (text.length <= max) return text;
-  return text.slice(0, max - 3) + "...";
 }
 
 function parsePost(html) {
@@ -159,14 +147,12 @@ export default class AutoReplyHandler extends Handler {
    * @returns {undefined | { reelId: string | undefined, videoLink: string | undefined, imageLink: string | undefined, title: string | undefined, description: string | undefined}}
    */
   async getFacebookMedia(message) {
-    const extractedLinks = message.content.match(/https?:\/\/[^\s]+/g);
-    if (!extractedLinks) return undefined;
-    const facebookLinks = extractedLinks.filter((url) =>
-      url.startsWith("https://www.facebook.com"),
-    );
-    let firstLink = facebookLinks.at(0);
-    if (firstLink) return undefined;
-    firstLink = firstLink.replace("https://www.facebook.com", PYTHON_API);
+    const facebookLink = findFBUrl(message.content);
+    if (!facebookLink) return undefined;
+
+    firstLink = firstLink
+      .replace("https://www.facebook.com", PYTHON_API)
+      .replace("https://www.facebed.com", PYTHON_API);
 
     const response = await fetch(firstLink);
 
@@ -234,6 +220,7 @@ export default class AutoReplyHandler extends Handler {
   async processFacebookUrl(message) {
     try {
       if (!message.inGuild() || message.author.bot) return;
+
       const [originalUrl, facebookUrl] = this.lnk(message);
       if (!facebookUrl) return;
 
@@ -273,7 +260,7 @@ export default class AutoReplyHandler extends Handler {
         if (isTooLargeContent) {
           const messagePayload = {
             content:
-              `${wrapLinks(message.content)}\n> -# ${findFBUrl(message.content).replace("facebook", "facebed")}` +
+              `${wrapLinks(message.content)}\n> -# ${facebookUrl.replace("facebook", "facebed")}` +
               (refMessage
                 ? `\n> -# ↪ [Reply to ↗ ${refMessage.author.displayName}](<${refMessage.url}>)`
                 : ""),
@@ -349,11 +336,7 @@ export default class AutoReplyHandler extends Handler {
           .setTitle("This post is private or unavailable !")
           .setDescription(`[See posts, photos and more on Facebook](<${facebookUrl}>)`)
           .setColor(Colors.Yellow);
-        const message = await message.reply({ embeds: [embed] });
-
-        setTimeout(() => {
-          message.delete().catch((error) => undefined);
-        }, 10000);
+        const msg = await message.reply({ embeds: [embed] });
       }
     } catch (error) {
       this.client.logger.writeLog(error);

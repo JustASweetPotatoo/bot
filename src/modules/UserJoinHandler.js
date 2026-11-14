@@ -3,8 +3,6 @@ import {
   ButtonBuilder,
   ButtonInteraction,
   ButtonStyle,
-  Collection,
-  Colors,
   ContainerBuilder,
   Events,
   GuildMember,
@@ -94,7 +92,7 @@ export default class UserJoinHandler extends Handler {
     await this.redisReady;
     if (!this.guild) this.guild = await this.client.guilds.fetch(GUILD_ID);
 
-    let members = await this.guild.members.fetch();
+    const members = await this.guild.members.fetch();
     const botMember = this.guild.members.me ?? (await this.guild.members.fetchMe());
     if (!botMember.permissions.has(PermissionsBitField.Flags.KickMembers)) {
       if (!this.kickPermissionWarningLogged) {
@@ -124,22 +122,21 @@ export default class UserJoinHandler extends Handler {
         continue;
       }
 
-      if (new Date().getTime() - member.joinedTimestamp < this.kickTime) {
-        continue;
-      }
-
       try {
+        this.logger.writeLog(
+          `Kicking member UID ${member.id}, joined timestamp ${member.joinedTimestamp}`,
+        );
+
+        if (member.kickable) {
+          await member.kick(
+            "Don't have role ***Neuron*** after joining the server for 1 day (anti clone).",
+          );
+        }
+
         await member.send({
           content:
             "You have been kicked from Thiên Hà Của Sứa with reason: Don't have role ***Neuron*** after joining the server for 1 day (anti clone).",
         });
-      } catch (error) {
-        this.logger.writeLog(error);
-      }
-
-      try {
-        this.logger.writeLog(`${member.id}:${member.displayName}:${member.joinedTimestamp}`);
-        await member.kick("Not verified after 24 hours");
       } catch (error) {
         this.logger.writeLog(error);
       }
@@ -217,7 +214,8 @@ export default class UserJoinHandler extends Handler {
       }
 
       await member.roles.add(role);
-      await this.redisClient.del(sessionKey);
+      await this.redisClient.hSet(sessionKey, { verified: "true", code: code });
+      await this.redisClient.expire(sessionKey, SESSION_TTL_SECONDS);
       await interaction.editReply({ content: "Bạn đã được xác minh!" });
     } catch (error) {
       this.logger.writeLog(error);
@@ -341,6 +339,8 @@ export default class UserJoinHandler extends Handler {
       const sessionKey = this.key(member.id, member.joinedTimestamp);
       const previousSession = await this.redisClient.hGetAll(sessionKey);
 
+      this.logger.writeLog(`User joined UID: ${member.id}`);
+
       if (Object.keys(previousSession).length !== 0) {
         return;
       }
@@ -354,8 +354,15 @@ export default class UserJoinHandler extends Handler {
 
       await this.redisClient.expire(sessionKey, SESSION_TTL_SECONDS);
 
-      await member.send({
-        content: `
+      const sendVerificationCode = async () => {
+        const currentSession = await this.redisClient.hGetAll(sessionKey);
+        if (currentSession.verified === "true") {
+          return;
+        }
+
+        try {
+          await member.send({
+            content: `
           ## Chào mừng bạn đã đến với Thiên hà của Sứa
           Sử dụng mã này để xác minh trong server
 
@@ -366,9 +373,72 @@ export default class UserJoinHandler extends Handler {
           > -# Khi bảng submit hiện lên, nhập code vào đó
           > -# Sau khi hoàn tất và đúng code, bot sẽ gửi tinh nhắn thành công và cấp role cho bạn
           `,
-      });
+          });
+        } catch (error) {
+          this.logger.writeLog(JSON.stringify(parseDMError(error)));
+        }
+      };
+
+      await sendVerificationCode();
+
+      setTimeout(async () => {
+        try {
+          const currentSession = await this.redisClient.hGetAll(sessionKey);
+          if (currentSession.verified === "true") {
+            return;
+          }
+
+          await sendVerificationCode();
+        } catch (error) {
+          this.logger.writeLog(error);
+        }
+      }, 60000);
     } catch (error) {
       this.logger.writeLog(error);
     }
   }
+}
+
+import { DiscordAPIError } from "discord.js";
+
+export function parseDMError(error) {
+  if (error instanceof DiscordAPIError) {
+    switch (error.code) {
+      case 50007:
+        return {
+          code: "CANNOT_SEND_DM",
+          message: "Cannot send messages to this user",
+          retryable: false,
+        };
+
+      case 10013:
+        return {
+          code: "UNKNOWN_USER",
+          message: "Unknown user",
+          retryable: false,
+        };
+
+      case 20028:
+      case 20029:
+        return {
+          code: "RATE_LIMIT",
+          message: "Discord rate limit exceeded",
+          retryable: true,
+        };
+    }
+  }
+
+  if (error instanceof Error) {
+    return {
+      code: "UNKNOWN",
+      message: error.message,
+      retryable: false,
+    };
+  }
+
+  return {
+    code: "UNKNOWN",
+    message: String(error),
+    retryable: false,
+  };
 }

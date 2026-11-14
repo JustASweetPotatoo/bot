@@ -1,5 +1,8 @@
 import { Events } from "discord.js";
-import MossClient from "../Client.js";
+
+/**
+ * @typedef {import("../Client.js").default} MossClient
+ */
 
 export default class Logger {
   /**
