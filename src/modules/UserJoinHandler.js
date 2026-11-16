@@ -127,16 +127,16 @@ export default class UserJoinHandler extends Handler {
           `Kicking member UID ${member.id}, joined timestamp ${member.joinedTimestamp}`,
         );
 
+        await member.send({
+          content:
+            "You have been kicked from Thiên Hà Của Sứa with reason: Don't have role ***Neuron*** after joining the server for 1 day (anti clone).",
+        });
+
         if (member.kickable) {
           await member.kick(
             "Don't have role ***Neuron*** after joining the server for 1 day (anti clone).",
           );
         }
-
-        await member.send({
-          content:
-            "You have been kicked from Thiên Hà Của Sứa with reason: Don't have role ***Neuron*** after joining the server for 1 day (anti clone).",
-        });
       } catch (error) {
         this.logger.writeLog(error);
       }

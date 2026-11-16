@@ -1,11 +1,16 @@
 import {
-  AttachmentBuilder,
   Collection,
   Colors,
+  ContainerBuilder,
   EmbedBuilder,
-  ForumChannel,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
   Message,
+  MessageFlags,
+  SeparatorBuilder,
+  SeparatorSpacingSize,
   TextChannel,
+  TextDisplayBuilder,
   ThreadChannel,
   VoiceChannel,
   WebhookClient,
@@ -13,9 +18,11 @@ import {
 import Handler from "./Handler.js";
 import fs from "fs";
 import { pipeline } from "stream/promises";
+import { basename } from "node:path";
 import { configDotenv } from "dotenv";
 import * as cheerio from "cheerio";
 import { estimateVideoSize, parseFacebookVideoUrl } from "../utils/utils.js";
+import { unlink } from "node:fs/promises";
 
 configDotenv();
 const PYTHON_API = process.env.PYTHON_API || "http://localhost:9812";
@@ -204,7 +211,7 @@ export default class AutoReplyHandler extends Handler {
 
     if (toAPI) {
       return [
-        firstUrl,
+        firstUrl.replace("https://www.facebed.com", "https://www.facebook.com"),
         firstUrl
           .replace("https://www.facebook.com", PYTHON_API)
           .replace("https://www.facebed.com", PYTHON_API),
@@ -231,6 +238,12 @@ export default class AutoReplyHandler extends Handler {
         timestamp: new Date(),
       };
 
+      const founderTextBuilder = new TextDisplayBuilder().setContent(
+        `> *BetterLink - Powered by **Potarozz***\n` +
+          `> *Facebed API by **pi.kt***\n` +
+          `> -# UID: ${message.author.id} · <t:${Math.floor(Date.now() / 1000)}:R>`,
+      );
+
       const response = await fetch(facebookUrl);
 
       if (!response.ok) {
@@ -253,77 +266,53 @@ export default class AutoReplyHandler extends Handler {
       let msg;
       const webhookClient = await this.getWebhook(message.channel);
 
+      const postDescription =
+        `> **[${postData.title}](${wrapLinks(facebookUrl)})**\n` +
+        `> ${postData.description ?? "No description"}`;
+
       if (postData.videoLink) {
-        const parsedVideoData = parseFacebookVideoUrl(postData.videoLink);
-        const isTooLargeContent = estimateVideoSize(parsedVideoData).estimatedWithErrorMB > 10;
+        const parsedVideoData = parseFacebookVideoUrl(postData.videoLink); // Don't delete !
 
-        if (isTooLargeContent) {
-          const messagePayload = {
-            content:
-              `${wrapLinks(message.content)}\n> -# ${facebookUrl.replace("facebook", "facebed")}` +
-              (refMessage
-                ? `\n> -# ↪ [Reply to ↗ ${refMessage.author.displayName}](<${refMessage.url}>)`
-                : ""),
-            embeds: [
-              new EmbedBuilder({
-                description: `> [${postData.title}](${wrapLinks(facebookUrl)})\n> -# ${postData.description ?? "No description"}`,
-                colors: Colors.Blurple,
-                video: postData.videoLink,
-              }),
-            ],
-            username: message.author?.displayName ?? message.member.displayName,
-            avatarURL: message.author.avatarURL(),
-          };
+        const contentBuilder = new TextDisplayBuilder().setContent(
+          [
+            postData.title ? `> ## [${postData.title}](${wrapLinks(originalUrl)})` : ``,
+            `> ${postData.description ?? "No description"}`.replace("\n", "\n> "),
+            refMessage
+              ? `> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
+              : "",
+          ].join("\n"),
+        );
 
-          msg = await webhookClient.send({
-            ...messagePayload,
-            threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
-          });
+        const webhookOptions = {
+          username: message.author.displayName,
+          avatarURL: message.author.avatarURL(),
+          threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
+        };
 
-          return;
-        } else {
-          const path = await downloadVideo(postData.videoLink, `${postData.reelId}.mp4`);
+        const messageContentBuilder = new TextDisplayBuilder({
+          content: wrapLinks(message.content),
+        });
 
-          if (!path) {
-            const embed = new EmbedBuilder()
-              .setTitle("This post is private or unavailable !")
-              .setDescription(`[See post or photos and more on Facebook](<${facebookUrl}>)`)
-              .setColor(Colors.Yellow);
-            await message.reply({ embeds: [embed] });
-            return;
-          }
+        const gallery = new MediaGalleryBuilder().addItems(
+          new MediaGalleryItemBuilder().setURL(postData.videoLink),
+        );
 
-          const messagePayload = {
-            content:
-              `${wrapLinks(message.content)}` +
-              (refMessage
-                ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
-                : ""),
-            files: [path],
-            embeds: [founderEmbed],
-            username: message.author.displayName,
-            avatarURL: message.author.avatarURL(),
-          };
+        msg = await webhookClient.send({
+          flags: MessageFlags.IsComponentsV2,
+          components: [messageContentBuilder, contentBuilder, gallery, founderTextBuilder],
+          ...webhookOptions,
+        });
 
-          msg = await webhookClient.send({
-            ...messagePayload,
-            threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
-          });
-          cache[postData.reelId] = msg.attachments.at(0).proxy_url;
-        }
+        if (message.deletable) await message.delete().catch((err) => "");
 
-        if (message.deletable) await message.delete();
+        return;
       } else if (postData.imageLink) {
-        const postEmbedDescription = `\n> **[${postData.title}](${wrapLinks(
-          facebookUrl,
-        )})**\n> ${postData.description}`;
-
         await webhookClient.send({
           content:
             wrapLinks(message.content) +
-            postEmbedDescription +
+            postDescription +
             (refMessage
-              ? `s\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
+              ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
               : ""),
           files: [postData.imageLink],
           embeds: [founderEmbed],
@@ -333,10 +322,11 @@ export default class AutoReplyHandler extends Handler {
         });
       } else {
         const embed = new EmbedBuilder()
-          .setTitle("This post is private or unavailable !")
+          .setTitle("This post is private or unavailable!")
           .setDescription(`[See posts, photos and more on Facebook](<${facebookUrl}>)`)
           .setColor(Colors.Yellow);
-        const msg = await message.reply({ embeds: [embed] });
+
+        msg = await message.reply({ embeds: [embed] });
       }
     } catch (error) {
       this.client.logger.writeLog(error);
