@@ -335,6 +335,8 @@ export default class UserJoinHandler extends Handler {
    */
   async onMemberAdd(member) {
     try {
+      if (member.guild.id != "811939594882777128") return;
+
       await this.redisReady;
       const sessionKey = this.key(member.id, member.joinedTimestamp);
       const previousSession = await this.redisClient.hGetAll(sessionKey);
@@ -362,17 +364,17 @@ export default class UserJoinHandler extends Handler {
 
         try {
           await member.send({
-            content: `
-          ## Chào mừng bạn đã đến với Thiên hà của Sứa
-          Sử dụng mã này để xác minh trong server
-
-          ## CODE: \`${code}\`
-          
-          **Hướng dẫn:**
-          > -# Sau khi nhận được tinh nhắn, hãy vào kênh #cảng-an-ninh và bấm vào nút xác minh ở tin nhắn mới nhất
-          > -# Khi bảng submit hiện lên, nhập code vào đó
-          > -# Sau khi hoàn tất và đúng code, bot sẽ gửi tinh nhắn thành công và cấp role cho bạn
-          `,
+            content: [
+              `## Chào mừng bạn đã đến với Thiên hà của Sứa`,
+              `Sử dụng mã này để xác minh trong server`,
+              "",
+              `## CODE: \`${code}\``,
+              "",
+              `**Hướng dẫn:**`,
+              `> -# Sau khi nhận được tinh nhắn, hãy vào kênh #cảng-an-ninh và bấm vào nút xác minh ở tin nhắn mới nhất`,
+              `> -# Khi bảng submit hiện lên, nhập code vào đó`,
+              `> -# Sau khi hoàn tất và đúng code, bot sẽ gửi tinh nhắn thành công và cấp role cho bạn`,
+            ].join("\n"),
           });
         } catch (error) {
           this.logger.writeLog(JSON.stringify(parseDMError(error)));
