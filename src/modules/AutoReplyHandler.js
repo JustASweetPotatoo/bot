@@ -56,24 +56,6 @@ function parsePost(html) {
   };
 }
 
-async function downloadVideo(url, path = "video.mp4") {
-  const res = await fetch(url);
-
-  if (!res.ok) throw new Error("Download fail");
-
-  const fileStream = fs.createWriteStream(path);
-
-  const body = res.body;
-
-  if (body) {
-    await pipeline(res.body, fileStream);
-  } else {
-    return undefined;
-  }
-
-  return path;
-}
-
 /**
  *
  * @param {string} text
@@ -266,32 +248,41 @@ export default class AutoReplyHandler extends Handler {
       let msg;
       const webhookClient = await this.getWebhook(message.channel);
 
-      const postDescription =
-        `> **[${postData.title}](${wrapLinks(facebookUrl)})**\n` +
-        `> ${postData.description ?? "No description"}`;
+      if (postData.videoLink == undefined && postData.imageLink == undefined) {
+        const embed = new EmbedBuilder()
+          .setTitle("This post is private or unavailable!")
+          .setDescription(`[See posts, photos and more on Facebook](<${facebookUrl}>)`)
+          .setColor(Colors.Yellow);
+
+        msg = await message.reply({ embeds: [embed] });
+        return;
+      }
+
+      const webhookOptions = {
+        username: message.author.displayName,
+        avatarURL: message.author.avatarURL(),
+        threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
+      };
+
+      const contentBuilder = new TextDisplayBuilder().setContent(
+        [
+          wrapLinks(message.content),
+          postData.title ? `## [${postData.title}](${wrapLinks(originalUrl)})` : "",
+          (postData.description ?? "No description")
+            .split("\n")
+            .filter((ct) => ct.trim().length !== 0)
+            .map((ct) => `> ${ct}`)
+            .join("\n"),
+          refMessage
+            ? `-# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
 
       if (postData.videoLink) {
         const parsedVideoData = parseFacebookVideoUrl(postData.videoLink); // Don't delete !
-
-        const contentBuilder = new TextDisplayBuilder().setContent(
-          [
-            postData.title ? `> ## [${postData.title}](${wrapLinks(originalUrl)})` : ``,
-            `> ${postData.description ?? "No description"}`.replace("\n", "\n> "),
-            refMessage
-              ? `> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
-              : "",
-          ].join("\n"),
-        );
-
-        const webhookOptions = {
-          username: message.author.displayName,
-          avatarURL: message.author.avatarURL(),
-          threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
-        };
-
-        const messageContentBuilder = new TextDisplayBuilder({
-          content: wrapLinks(message.content),
-        });
 
         const gallery = new MediaGalleryBuilder().addItems(
           new MediaGalleryItemBuilder().setURL(postData.videoLink),
@@ -299,7 +290,7 @@ export default class AutoReplyHandler extends Handler {
 
         msg = await webhookClient.send({
           flags: MessageFlags.IsComponentsV2,
-          components: [messageContentBuilder, contentBuilder, gallery, founderTextBuilder],
+          components: [contentBuilder, gallery, founderTextBuilder],
           ...webhookOptions,
         });
 
@@ -307,26 +298,15 @@ export default class AutoReplyHandler extends Handler {
 
         return;
       } else if (postData.imageLink) {
-        await webhookClient.send({
-          content:
-            wrapLinks(message.content) +
-            postDescription +
-            (refMessage
-              ? `\n> -# ↪ [Reply to ↗ ${refMessage.member.displayName}](<${refMessage.url}>)`
-              : ""),
-          files: [postData.imageLink],
-          embeds: [founderEmbed],
-          username: message.author.displayName,
-          avatarURL: message.author.avatarURL(),
-          threadId: message.channel instanceof ThreadChannel ? message.channelId : undefined,
-        });
-      } else {
-        const embed = new EmbedBuilder()
-          .setTitle("This post is private or unavailable!")
-          .setDescription(`[See posts, photos and more on Facebook](<${facebookUrl}>)`)
-          .setColor(Colors.Yellow);
+        const gallery = new MediaGalleryBuilder().addItems(
+          new MediaGalleryItemBuilder().setURL(postData.imageLink),
+        );
 
-        msg = await message.reply({ embeds: [embed] });
+        await webhookClient.send({
+          flags: MessageFlags.IsComponentsV2,
+          components: [contentBuilder, gallery, founderTextBuilder],
+          ...webhookOptions,
+        });
       }
     } catch (error) {
       this.client.logger.writeLog(error);
@@ -377,7 +357,7 @@ export default class AutoReplyHandler extends Handler {
 
       this.client.userJoinHandler.createMessage(message);
 
-      this.processFacebookUrl(message);
+      this.processFacebookUrl(message).catch((error) => this.logger.writeLog(error));
 
       const autoReplyItem = this.autoReplyData.find((value) =>
         value.wildcard

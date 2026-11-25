@@ -3528,7 +3528,7 @@ def format_reel_post_embed(post: ParsedPost) -> str:
             <title>{get_credit()}</title>
             <meta charset="UTF-8"/>
             <meta property="og:title" content="{escape(post.author_name)}"/>
-            <meta property="og:description" content="{escape(post.text[:1024])}"/>
+            <meta property="og:description" content="{escape(post.text, quote=True)}"/>
             <meta property="og:site_name" content="{site_name}"/>
             <meta property="og:url" content="{escape(quote(post.url), quote=True)}"/>
             <meta property="og:video:type" content="video/mp4"/>
@@ -3569,7 +3569,7 @@ def format_full_post_embed(post: ParsedPost) -> str:
             <title>{get_credit()}</title>
             <meta charset="UTF-8"/>
             <meta property="og:title" content="{escape(post.author_name)}"/>
-            <meta property="og:description" content="{escape(post.text[:1024])}"/>
+            <meta property="og:description" content="{escape(post.text, quote=True)}"/>
             <meta property="og:site_name" content="{site_name}"/>
             <meta property="og:url" content="{escape(quote(post.url), quote=True)}"/>
             {image_meta_tags}
